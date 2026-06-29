@@ -1,0 +1,22 @@
+{
+  "name": "td-tas-skill-extension",
+  "owner": {
+    "name": "Kazuki Tsukahara",
+    "email": "kazuki.tsukahara@treasuredata.com"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Treasure Data skill extensions — Excel to TD upload and more"
+  },
+  "plugins": [
+    {
+      "name": "excel-to-td-upload",
+      "description": "Use when the user wants to upload an Excel file (.xlsx) with multiple sheets to Treasure Data (TD). Handles multi-sheet files, Japanese column name translation, and TD naming conventions.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./excel-to-td-upload"
+      ]
+    }
+  ]
+}
