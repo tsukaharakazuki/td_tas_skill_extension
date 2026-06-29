@@ -15,7 +15,7 @@
       "source": "./",
       "strict": false,
       "skills": [
-        "./excel-to-td-upload"
+        "./excel-to-td-upload/excel-to-td-upload"
       ]
     }
   ]
