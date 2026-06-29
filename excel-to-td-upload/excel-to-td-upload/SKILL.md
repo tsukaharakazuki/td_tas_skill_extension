@@ -1,6 +1,6 @@
 ---
 name: excel-to-td-upload
-description: Use when the user wants to upload an Excel file (.xlsx) with multiple sheets to Treasure Data (TD). Triggers on: "ExcelをTDにアップロード", "ExcelをTreasure Dataに取り込む", "スプレッドシートをTDに", "エクセルをインポート", "シートごとにテーブルに", "Excel upload to TD", "upload Excel to Treasure Data", or any request to import a multi-sheet Excel file into a TD database/table.
+description: 'Use when the user wants to upload an Excel file (.xlsx) with multiple sheets to Treasure Data (TD). Triggers on: ExcelをTDにアップロード, ExcelをTreasure Dataに取り込む, スプレッドシートをTDに, エクセルをインポート, シートごとにテーブルに, Excel upload to TD, upload Excel to Treasure Data, or any request to import a multi-sheet Excel file into a TD database/table.'
 ---
 
 # Excel → Treasure Data Upload
