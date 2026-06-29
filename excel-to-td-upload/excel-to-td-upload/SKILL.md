@@ -57,8 +57,10 @@ for sheet_name in wb.sheetnames:
 質問1: アップロード先のDatabase名は何ですか？
   header: "Database名"
   options:
-    - label: "直接入力（Other で入力）"
-      description: "既存または新規のDB名を入力してください（例: my_database）"
+    - label: "既存のDBに追加（推奨）"
+      description: "既存データベース名を Other で入力してください（例: my_database）"
+    - label: "新規DBを作成"
+      description: "新しいデータベース名を Other で入力してください（例: my_new_database）"
 
 質問2: どのシートを取り込みますか？
   header: "シート選択"
