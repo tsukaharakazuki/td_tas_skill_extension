@@ -5,7 +5,7 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Treasure Data skill extensions — Excel to TD upload and more"
   },
   "plugins": [
@@ -25,6 +25,15 @@
       "strict": false,
       "skills": [
         "./engage-mail-check"
+      ]
+    },
+    {
+      "name": "engage-html-to-plaintext",
+      "description": "Use when the user wants to generate a plaintext version of an EngageStudio email template from its HTML content. Triggers on EngageStudio email template URLs or phrases like 'プレーンテキストを作成', 'プレーンテキスト生成', 'HTMLからテキスト版', 'メールのテキスト版を作って'.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./engage-html-to-plaintext"
       ]
     }
   ]
