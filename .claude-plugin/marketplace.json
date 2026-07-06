@@ -5,7 +5,7 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Treasure Data skill extensions — Excel to TD upload and more"
   },
   "plugins": [
@@ -16,6 +16,15 @@
       "strict": false,
       "skills": [
         "./excel-to-td-upload"
+      ]
+    },
+    {
+      "name": "engage-mail-check",
+      "description": "Use when the user wants to verify that an Engage Studio email's HTML content and plain text content are consistent. Triggers on EngageStudio URLs or phrases like 'EngageStudioのメール確認', 'HTMLとプレーンテキストの整合性', 'メールの差分チェック', 'プレーンテキストが古いままになっていないか', 'Engageキャンペーンのチェック', 'メール配信前チェック'.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./engage-mail-check"
       ]
     }
   ]
