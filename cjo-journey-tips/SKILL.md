@@ -1,6 +1,6 @@
 ---
 name: cjo-journey-tips
-description: Use when creating, editing, or troubleshooting Customer Journey Orchestration (CJO) journeys and activations on Treasure Data. Covers tdx journey CLI vs REST API usage, common errors, activation settings, segment conditions, and coupon code/string builder configurations. Triggers on: "ジャーニーを作成", "アクティベーション設定", "CJO修正", "journey push が効かない", "journey activation", "クーポンコード設定", "ストリングビルダー", "Engage Studio", "always-on campaign", or any request to build/edit a TD journey.
+description: 'Use when creating, editing, or troubleshooting Customer Journey Orchestration (CJO) journeys and activations on Treasure Data. Covers tdx journey CLI vs REST API usage, common errors, activation settings, segment conditions, and coupon code/string builder configurations. Triggers on: "ジャーニーを作成", "アクティベーション設定", "CJO修正", "journey push が効かない", "journey activation", "クーポンコード設定", "ストリングビルダー", "Engage Studio", "always-on campaign", or any request to build/edit a TD journey.'
 ---
 
 # CJO ジャーニー作成・修正 Tips
