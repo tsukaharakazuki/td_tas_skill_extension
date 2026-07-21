@@ -35,6 +35,15 @@
       "skills": [
         "./engage-html-to-plaintext"
       ]
+    },
+    {
+      "name": "cjo-journey-tips",
+      "description": "Use when creating, editing, or troubleshooting Customer Journey Orchestration (CJO) journeys and activations on Treasure Data. Covers tdx journey CLI vs REST API usage, common errors, activation settings, segment conditions, and coupon code/string builder configurations.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./cjo-journey-tips"
+      ]
     }
   ]
 }
