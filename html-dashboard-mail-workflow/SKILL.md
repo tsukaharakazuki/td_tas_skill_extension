@@ -3,11 +3,6 @@ name: html-dashboard-mail-workflow
 description: Treasure AI Studioで作成したHTMLダッシュボードをTreasure Workflow（Digdag）のmail>オペレーターでメール送信するときに使用する。汎用Workflowプロジェクトの新規作成・既存プロジェクト再利用、ダッシュボードごとのdigファイル分割、HTMLテンプレート配置、検証、デプロイ、安全な送信確認を支援する。
 ---
 
----
-name: html-dashboard-mail-workflow
-description: Treasure AI Studioで作成したHTMLダッシュボードをTreasure Workflow（Digdag）のmail>オペレーターでメール送信するときに使用する。汎用Workflowプロジェクトの新規作成・既存プロジェクト再利用、ダッシュボードごとのdigファイル分割、HTMLテンプレート配置、検証、デプロイ、安全な送信確認を支援する。
----
-
 # HTMLダッシュボード メール送信Workflow
 
 Treasure AI Studioで作成したHTMLダッシュボードを、Treasure Workflow（Digdag）の`mail>`オペレーターでメール送信するための汎用Skillです。
@@ -90,7 +85,7 @@ dashboard_management.dig
 
 Studioから出力したHTMLは、原則として別ファイルで管理する。短いHTML以外では`data: |`によるインライン埋め込みを避ける。
 
-Workflow内でクエリやHTML生成が必要な場合は、`+send_dashboard`の前にタスクを置き、`mail>:`が参照する場所に最終HTMLを作成する。Treasure Data Workflowでは`sh>`を使わず、対応するTDオペレーターまたは`py>`を使用する。
+Workflow内でクエリやHTML生成が必要な場合は、AIが事前にデータを取得してHTMLを生成する方法を優先する。TD Workflow上では、環境によって`py>`が`DockerConfig is not valid for EcsCommand`エラーになることがあるため、HTML生成処理に`py>`を使わない。Workflowは、完成済みHTMLを`mail>`で送信するシンプルな構成にする。
 
 ### 3. メールHTMLを確認する
 
@@ -118,11 +113,54 @@ HTML内の`${...}`がJavaScriptテンプレート用の場合、Digdag変数展�
 
 設定確認には、可能な限り`tdx wf validate`などの検証コマンドを使う。検証のためだけに実際のWorkflowを実行しない。
 
-### 5. デプロイと送信
+## デプロイコマンド
+
+プロジェクトの状態に応じてコマンドを使い分ける。
+
+```bash
+# 新規プロジェクトまたは初回アップロード
+# tdx.jsonがない場合はこちらを使う
+tdx wf upload <project-dir>
+
+# 既存プロジェクトの差分プッシュ
+# tdx wf pullでtdx.jsonを取得済みの場合に使う
+tdx wf push
+
+# 手動実行（メール送信を伴うため、事前確認が必要）
+tdx wf run <project>.<workflow>
+```
+
+`tdx wf push`は`tdx.json`がないと`No tdx.json found`エラーになる。新規作成または初回アップロードでは、必ず`tdx wf upload`を使う。
+
+## デプロイと送信
 
 push前に、追加・変更するWorkflow名とファイルを提示する。既存プロジェクトの場合は、既存Workflowを維持していることも示す。
 
 Workflowの実行は外部へのメール送信を伴う。実行前にWorkflow名、実行方法、送信元、宛先、送信範囲を明示し、明示的な確認を得る。利用可能なら先にdry-runまたはプレビューを行う。`-y`などで確認を回避しない。
+
+## 推奨するデータ取得・HTML生成フロー
+
+TDのデータを含むダッシュボードを送信する場合は、次のようにWorkflowの外でHTMLを生成する。
+
+```text
+AIがtdx queryでデータ取得
+    ↓
+AIがHTMLを生成してtemplates/に配置
+    ↓
+tdx wf upload <project-dir> または tdx wf push
+    ↓
+Workflowはmail>のみでメール送信
+```
+
+データベース名、テーブル名、カラム名は利用者の環境に合わせて確認する。サンプルに実在する顧客・企業固有のデータベース名やテーブル名を記載しない。
+
+`tdx query`の例:
+
+```bash
+tdx query -d <database> --limit <n> "<SQL>"
+```
+
+SQLは対象環境のスキーマに合わせて作成し、時間条件とパーティションを適切に指定する。クエリ結果をHTMLへ反映した後、対象ファイルをプロジェクトへ配置してアップロードする。
 
 ## 出力形式
 
@@ -142,10 +180,10 @@ Workflowの実行は外部へのメール送信を伴う。実行前にWorkflow�
 
 ### 既存プロジェクトへの追加
 
-`exec_reports`に経営会議用ダッシュボードを追加する場合、既存ファイルを維持して次を追加する。
+`dashboard_reports`に経営会議用ダッシュボードを追加する場合、既存ファイルを維持して次を追加する。
 
 ```text
-exec_reports/
+dashboard_reports/
 ├── manifest.yml                 # 維持
 ├── existing_report.dig          # 維持
 ├── management_meeting.dig       # 追加
@@ -163,3 +201,6 @@ exec_reports/
 - 既存プロジェクトの命名規則や`manifest.yml`をサンプルより優先する。
 - 同じ宛先でもスケジュールや件名が異なる場合は、原則として`.dig`を分ける。
 - 複数ダッシュボードを1通にまとめるのは、利用者が明示的に希望した場合だけにする。
+- `py>`は使わない。HTML生成はWorkflow外で行い、Workflowは`mail>`中心の構成にする。
+- 新規プロジェクトのデプロイは`tdx wf upload`を使う。`tdx wf push`は`tdx.json`がある既存プロジェクトで使う。
+- サンプルや出力に顧客名、顧客固有のデータベース名、テーブル名、メールアドレス、URLを残さない。

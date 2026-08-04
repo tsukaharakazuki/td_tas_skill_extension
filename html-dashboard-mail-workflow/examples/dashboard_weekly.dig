@@ -6,7 +6,7 @@ _export:
 
 +send_dashboard:
   mail>: templates/dashboard_weekly.html
-  subject: "週次ダッシュボード - ${session_date}"
+  subject: "週次レポート - ${session_date}"
   to:
     - "weekly-owner@example.com"
     - "weekly-team@example.com"
