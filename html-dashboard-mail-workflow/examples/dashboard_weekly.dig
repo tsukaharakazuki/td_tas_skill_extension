@@ -1,0 +1,13 @@
+timezone: Asia/Tokyo
+
+_export:
+  mail:
+    from: "sender@example.com"
+
++send_dashboard:
+  mail>: templates/dashboard_weekly.html
+  subject: "週次ダッシュボード - ${session_date}"
+  to:
+    - "weekly-owner@example.com"
+    - "weekly-team@example.com"
+  html: true
