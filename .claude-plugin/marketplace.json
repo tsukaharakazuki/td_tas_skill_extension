@@ -44,6 +44,15 @@
       "skills": [
         "./cjo-journey-tips"
       ]
+    },
+    {
+      "name": "html-dashboard-mail-workflow",
+      "description": "Treasure AI Studioで作成したHTMLダッシュボードをTreasure Workflow（Digdag）のmail>オペレーターでメール送信するときに使用する。汎用Workflowプロジェクトの新規作成・既存プロジェクト再利用、ダッシュボードごとのdigファイル分割、HTMLテンプレート配置、検証、デプロイ、安全な送信確認を支援する。",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./html-dashboard-mail-workflow"
+      ]
     }
   ]
 }
