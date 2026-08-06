@@ -1,0 +1,10 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
++attribute_fit:
+  td>: ../queries/attribute_fit/attribute_fit.sql
+  insert_into: reco_all_candidates

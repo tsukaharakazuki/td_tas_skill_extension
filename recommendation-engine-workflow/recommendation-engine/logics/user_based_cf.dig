@@ -1,0 +1,42 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
+###############################################################################
+# ユーザー間協調フィルタリング: Python Custom Script + Matrix Factorization
+#
+# 購買ユーザー×商品行列を作成し、Surprise SVDで潜在因子分解する。
+# Pythonで未購入商品の予測スコアを算出し、reco_all_candidatesへ追記する。
+###############################################################################
+
++interactions:
+  td>: ../queries/user_based_cf/interactions.sql
+  create_table: user_based_cf_interactions
+
++matrix_factorization:
+  py>: tasks.user_based_cf.matrix_factorization.run
+  docker:
+    image: "treasuredata/customscript-python:3.12.11-td3"
+  database: ${common.database}
+  source_table: user_based_cf_interactions
+  output_table: reco_user_based_cf
+  top_n: ${logics.user_based_cf.top_n}
+  n_factors: 50
+  n_epochs: 20
+  min_interactions: 1
+  _env:
+    TD_API_KEY: ${secret:td.apikey}
+    TD_DATABASE: ${common.database}
+    SOURCE_TABLE: user_based_cf_interactions
+    OUTPUT_TABLE: reco_user_based_cf
+    TOP_N: ${logics.user_based_cf.top_n}
+    N_FACTORS: "50"
+    N_EPOCHS: "20"
+    MIN_INTERACTIONS: "1"
+
++append_candidates:
+  td>: ../queries/user_based_cf/append_candidates.sql
+  insert_into: reco_all_candidates

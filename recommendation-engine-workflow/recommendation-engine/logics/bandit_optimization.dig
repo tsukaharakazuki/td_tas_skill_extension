@@ -1,0 +1,18 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
+###############################################################################
+# マルチアームド・バンディット（Epsilon-Greedy）
+#
+# 十分な表示・成果ログ（impression_db.impression_tbl）が蓄積されてから
+# config/params.yml の bandit_optimization.enabled を true にすること。
+# 初期段階では固定ルール（他ロジック）やA/Bテストの方が原因を説明しやすい。
+###############################################################################
+
++bandit_optimization:
+  td>: ../queries/bandit_optimization/bandit_optimization.sql
+  insert_into: reco_all_candidates

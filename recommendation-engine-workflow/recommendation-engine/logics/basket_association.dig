@@ -1,0 +1,10 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
++basket_association:
+  td>: ../queries/basket_association/basket_association.sql
+  insert_into: reco_all_candidates

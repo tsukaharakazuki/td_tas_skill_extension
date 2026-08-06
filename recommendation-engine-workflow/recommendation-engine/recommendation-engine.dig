@@ -1,0 +1,125 @@
+timezone: Asia/Tokyo
+
+schedule:
+  daily>: "03:00:00"
+
+!include : config/params.yml
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
+_error:
+  http>: ${secret:slack.webhook}
+  method: POST
+  content:
+    text: ":rotating_light: `recommendation-engine` failed for ${session_date}"
+
+###############################################################################
+# 親ワークフロー: レコメンドエンジン オーケストレーター
+#
+# 1. 候補プール（reco_all_candidates）を初期化
+# 2. config/params.yml の logics.*.enabled に応じて、各ロジックdigを呼び出す
+#    - 個々のロジックは logics/*.dig に分離（要件1）
+#    - 動かす/動かさないの制御はこの親WFの if> で行う（要件2）
+#    - 出力単位（member_id / cookie）や推薦数は各ロジックのconfigで指定（要件3, 4）
+#    - 各ロジックは共有テーブル reco_all_candidates に insert_into で追記する
+# 3. 全ロジックの結果を最終統合ロジック（final/final_output.dig）で1人1リストに集約（要件5）
+###############################################################################
+
++prepare:
+  td_ddl>:
+  empty_tables: ["reco_all_candidates"]
+
++run_logics:
+  # 各ロジックは互いに独立しているため並列実行する。
+  # 同時実行数はアカウントの同時実行タスク数上限に応じて調整する。
+  _parallel:
+    limit: 4
+
+  +bestseller_overall:
+    if>: ${logics.bestseller_overall.enabled}
+    _do:
+      call>: logics/bestseller_overall.dig
+
+  +bestseller_category:
+    if>: ${logics.bestseller_category.enabled}
+    _do:
+      call>: logics/bestseller_category.dig
+
+  +bestseller_brand:
+    if>: ${logics.bestseller_brand.enabled}
+    _do:
+      call>: logics/bestseller_brand.dig
+
+  +browsing_history:
+    if>: ${logics.browsing_history.enabled}
+    _do:
+      call>: logics/browsing_history.dig
+
+  +cart_favorite:
+    if>: ${logics.cart_favorite.enabled}
+    _do:
+      call>: logics/cart_favorite.dig
+
+  +repurchase:
+    if>: ${logics.repurchase.enabled}
+    _do:
+      call>: logics/repurchase.dig
+
+  +item_cooccurrence:
+    if>: ${logics.item_cooccurrence.enabled}
+    _do:
+      call>: logics/item_cooccurrence.dig
+
+  +basket_association:
+    if>: ${logics.basket_association.enabled}
+    _do:
+      call>: logics/basket_association.dig
+
+  +attribute_fit:
+    if>: ${logics.attribute_fit.enabled}
+    _do:
+      call>: logics/attribute_fit.dig
+
+  +rfm_stage:
+    if>: ${logics.rfm_stage.enabled}
+    _do:
+      call>: logics/rfm_stage.dig
+
+  +ml_purchase_probability:
+    if>: ${logics.ml_purchase_probability.enabled}
+    _do:
+      call>: logics/ml_purchase_probability.dig
+
+  +user_based_cf:
+    if>: ${logics.user_based_cf.enabled}
+    _do:
+      call>: logics/user_based_cf.dig
+
+  +attribute_similarity:
+    if>: ${logics.attribute_similarity.enabled}
+    _do:
+      call>: logics/attribute_similarity.dig
+
+  +time_seasonality:
+    if>: ${logics.time_seasonality.enabled}
+    _do:
+      call>: logics/time_seasonality.dig
+
+  +bandit_optimization:
+    if>: ${logics.bandit_optimization.enabled}
+    _do:
+      call>: logics/bandit_optimization.dig
+
++final_integration:
+  if>: ${final.enabled}
+  _do:
+    call>: final/final_output.dig
+
++notify_success:
+  http>: ${secret:slack.webhook}
+  method: POST
+  content:
+    text: ":white_check_mark: `recommendation-engine` completed for ${session_date}"

@@ -1,0 +1,35 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
+###############################################################################
+# ML購入確率予測（実装テンプレート）
+#
+# 1. 特徴量を作成 (ml_features_purchase_probability)
+# 2. Python(scikit-learn)で学習・推論し、ml_purchase_probability_scores に書き込む
+# 3. カテゴリ内売れ筋と組み合わせて候補商品リストに変換し、reco_all_candidates に追記
+#
+# 実運用では特徴量・モデル・カテゴリ粒度をクライアント要件に応じて再設計すること。
+###############################################################################
+
++features:
+  td>: ../queries/ml_purchase_probability/features.sql
+  create_table: ml_features_purchase_probability
+
++train_predict:
+  py>: tasks.ml_purchase_probability.train_predict.run
+  docker:
+    image: "treasuredata/customscript-python:3.12.11-td1"
+  database: ${common.database}
+  prediction_window_days: ${logics.ml_purchase_probability.prediction_window_days}
+  _env:
+    TD_API_KEY: ${secret:td.apikey}
+    TD_DATABASE: ${common.database}
+    PREDICTION_WINDOW_DAYS: ${logics.ml_purchase_probability.prediction_window_days}
+
++to_candidates:
+  td>: ../queries/ml_purchase_probability/to_candidates.sql
+  insert_into: reco_all_candidates

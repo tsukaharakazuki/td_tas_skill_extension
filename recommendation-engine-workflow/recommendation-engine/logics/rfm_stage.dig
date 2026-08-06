@@ -1,0 +1,10 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
++rfm_stage:
+  td>: ../queries/rfm_stage/rfm_stage.sql
+  insert_into: reco_all_candidates

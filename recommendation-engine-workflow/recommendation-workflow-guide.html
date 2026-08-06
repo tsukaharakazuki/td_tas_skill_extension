@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Treasure AI | Recommendation Workflow Guide</title>
+  <style>
+    :root {
+      --navy: #11183f;
+      --ink: #171a38;
+      --muted: #667085;
+      --line: #e4e7ec;
+      --paper: #ffffff;
+      --soft: #f7f8fc;
+      --lavender: #ecebff;
+      --purple: #635bff;
+      --orange: #ff805d;
+      --mint: #d9f7ee;
+      --yellow: #fff2c7;
+      --shadow: 0 18px 50px rgba(17, 24, 63, .09);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--ink); background: var(--soft); font-family: Inter, "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.75; }
+    a { color: inherit; text-decoration: none; }
+    .topbar { position: sticky; top: 0; z-index: 20; background: rgba(17,24,63,.97); color: #fff; border-bottom: 1px solid rgba(255,255,255,.13); }
+    .topbar-inner { max-width: 1240px; margin: auto; height: 72px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; }
+    .brand { display:flex; align-items:center; gap: 15px; font-weight: 700; letter-spacing: .02em; }
+    .brand img { width: 148px; height: auto; display:block; }
+    .brand-label { border-left: 1px solid rgba(255,255,255,.35); padding-left: 15px; color: #d9dcf3; font-size: 13px; }
+    .nav { display:flex; gap: 20px; align-items:center; font-size: 13px; color: #d9dcf3; }
+    .nav a:hover { color:#fff; }
+    .hero { background: radial-gradient(circle at 80% 10%, rgba(99,91,255,.45), transparent 35%), linear-gradient(125deg, var(--navy), #202a68 65%, #5147b6); color:#fff; }
+    .hero-inner { max-width:1240px; margin:auto; padding: 92px 28px 88px; display:grid; grid-template-columns: 1.25fr .75fr; gap: 50px; align-items:center; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.16em; font-size:12px; font-weight:800; color:#bfc6ff; }
+    h1 { font-size: clamp(36px, 5vw, 66px); line-height:1.08; letter-spacing:-.045em; margin: 16px 0 22px; max-width: 760px; }
+    .hero p { font-size:18px; color:#e5e7fa; max-width:720px; margin:0; }
+    .hero-card { background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.22); border-radius:24px; padding:25px; backdrop-filter: blur(8px); box-shadow: 0 20px 55px rgba(0,0,0,.16); }
+    .hero-card h3 { margin: 0 0 12px; font-size:15px; color:#fff; }
+    .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; }
+    .flow span { background:#fff; color:var(--navy); border-radius:999px; padding:5px 10px; font-weight:700; }
+    .flow i { color:#cdd2ff; font-style:normal; }
+    .wrap { max-width:1240px; margin:auto; padding: 58px 28px 100px; }
+    .section { margin-top:78px; scroll-margin-top: 95px; }
+    .section:first-child { margin-top:0; }
+    .section-head { display:flex; justify-content:space-between; gap:20px; align-items:end; margin-bottom:25px; }
+    .section-head h2 { margin:0; font-size:32px; letter-spacing:-.03em; line-height:1.2; }
+    .section-head p { margin:0; color:var(--muted); max-width:610px; font-size:14px; }
+    .kpis { display:grid; grid-template-columns: repeat(4, 1fr); gap:14px; }
+    .kpi { background:var(--paper); border:1px solid var(--line); border-radius:17px; padding:20px; box-shadow:var(--shadow); }
+    .kpi strong { display:block; font-size:32px; color:var(--purple); line-height:1; margin-bottom:8px; }
+    .kpi span { color:var(--muted); font-size:13px; }
+    .architecture { background:var(--navy); color:#fff; border-radius:22px; padding:28px; display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; align-items:center; box-shadow:var(--shadow); }
+    .arch-step { text-align:center; border:1px solid rgba(255,255,255,.2); padding:16px 8px; border-radius:14px; background:rgba(255,255,255,.07); font-size:13px; }
+    .arch-step b { display:block; color:#cdd2ff; font-size:11px; margin-bottom:7px; }
+    .arch-arrow { color:#9ea8ff; text-align:center; font-size:22px; }
+    .logic-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; }
+    .logic-card { background:#fff; border:1px solid var(--line); border-radius:20px; padding:28px 30px 27px 32px; position:relative; overflow:hidden; box-shadow:0 10px 32px rgba(17,24,63,.045); min-height:330px; }
+    .logic-card::before { content:""; position:absolute; left:0; top:0; width:6px; height:100%; background:var(--purple); }
+    .logic-card:nth-child(3n+2)::before { background:var(--orange); }
+    .logic-card:nth-child(3n)::before { background:#23b99a; }
+    .logic-card h3 { font-size:22px; line-height:1.3; margin:0 0 11px; letter-spacing:-.025em; }
+    .logic-card p { margin:0 0 15px; color:var(--muted); font-size:14px; }
+    .logic-card .detail-label { display:block; color:var(--purple); font-size:11px; font-weight:900; letter-spacing:.08em; margin:14px 0 3px; }
+    .logic-card .detail { margin:0; color:var(--ink); font-size:14px; line-height:1.65; }
+    .logic-card .example { background:var(--soft); border-radius:10px; padding:10px 13px; margin-top:15px; color:#454b68; font-size:13px; line-height:1.6; }
+    .logic-card .example b { color:var(--navy); }
+    .tag { display:inline-block; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:800; background:var(--lavender); color:#5149cd; margin:2px 3px 2px 0; }
+    .tag.orange { background:#fff0eb; color:#c85232; }
+    .tag.mint { background:var(--mint); color:#087d65; }
+    .decision { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+    .decision-card { border-radius:18px; padding:24px; border:1px solid var(--line); background:#fff; }
+    .decision-card h3 { margin:0 0 12px; font-size:18px; }
+    .decision-card ul { margin:0; padding-left:19px; color:var(--muted); font-size:14px; }
+    .decision-card.purple { background:var(--lavender); border-color:#d8d5ff; }
+    .decision-card.orange { background:#fff3ed; border-color:#ffd9cc; }
+    .industry-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; }
+    .industry { background:#fff; border:1px solid var(--line); border-radius:18px; padding:24px; }
+    .industry h3 { margin:0 0 4px; font-size:19px; }
+    .industry .goal { color:var(--purple); font-weight:800; font-size:13px; margin-bottom:13px; }
+    .industry table { width:100%; border-collapse:collapse; font-size:13px; }
+    .industry th,.industry td { text-align:left; border-top:1px solid var(--line); padding:8px 4px; vertical-align:top; }
+    .industry th { color:var(--muted); font-weight:600; width:34%; }
+    .rollout { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; }
+    .phase { background:#fff; border:1px solid var(--line); border-radius:17px; padding:21px; }
+    .phase .num { display:inline-flex; width:29px; height:29px; align-items:center; justify-content:center; background:var(--navy); color:#fff; border-radius:50%; font-weight:800; font-size:13px; }
+    .phase h3 { font-size:16px; margin:12px 0 7px; }
+    .phase p { margin:0; font-size:13px; color:var(--muted); }
+    .callout { margin-top:22px; padding:22px 25px; border-radius:18px; background:linear-gradient(100deg,#e9e8ff,#f8f6ff); border:1px solid #d8d5ff; }
+    .callout strong { color:var(--navy); }
+    .footer { background:var(--navy); color:#d9dcf3; padding:38px 28px; }
+    .footer-inner { max-width:1240px; margin:auto; display:flex; justify-content:space-between; gap:20px; font-size:12px; }
+    code { background:#f0f1f7; color:#413aa5; border-radius:5px; padding:2px 5px; font-size:.9em; }
+    @media (max-width: 900px) { .hero-inner,.decision { grid-template-columns:1fr; } .logic-grid { grid-template-columns:repeat(2,1fr); } .kpis,.rollout { grid-template-columns:repeat(2,1fr); } .architecture { grid-template-columns:repeat(3,1fr); } .industry-grid { grid-template-columns:1fr; } }
+    @media (max-width: 600px) { .topbar-inner { padding:0 18px; } .nav { display:none; } .brand-label { display:none; } .hero-inner,.wrap { padding-left:18px; padding-right:18px; } .logic-grid,.kpis,.rollout { grid-template-columns:1fr; } .architecture { grid-template-columns:1fr; } .arch-arrow { transform:rotate(90deg); } .section-head { display:block; } .section-head p { margin-top:10px; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top"><img src="https://treasureailaunchhub.lovable.app/assets/master-white-dsBd9n3U.png" alt="Treasure AI"><span class="brand-label">Recommendation Workflow Guide</span></a>
+      <nav class="nav"><a href="#architecture">Architecture</a><a href="#logics">Logics</a><a href="#selection">Selection guide</a><a href="#industries">Industries</a><a href="#rollout">Rollout</a></nav>
+    </div>
+  </header>
+  <main id="top">
+    <section class="hero">
+      <div class="hero-inner">
+        <div>
+          <div class="eyebrow">Treasure AI / CDP activation playbook</div>
+          <h1>Treasure AI - レコメンドWorkflow活用ガイド</h1>
+          <p>Webアクセス・購買・会員属性を組み合わせ、15種類の候補生成ロジックから、顧客ごとに最適な商品を選び出すための設計・選定・業界別活用ガイドです。</p>
+        </div>
+        <div class="hero-card">
+          <h3>Workflowの基本フロー</h3>
+          <div class="flow"><span>Web / 購買 / 属性</span><i>→</i><span>候補生成</span><i>→</i><span>スコア統合</span><i>→</i><span>除外・多様性</span><i>→</i><span>顧客別出力</span></div>
+          <p style="font-size:13px;margin-top:18px;color:#d9dcf3;">ロジックごとにON/OFF、対象キー（member_id / cookie）、推薦件数、期間、重みを設定できます。</p>
+        </div>
+      </div>
+    </section>
+    <div class="wrap">
+      <section class="section" id="overview">
+        <div class="section-head"><h2>このWorkflowでできること</h2><p>ルールベースから機械学習・最適化までを、同じ候補テーブルと最終ランキングに接続します。</p></div>
+        <div class="kpis"><div class="kpi"><strong>15</strong><span>候補生成ロジック</span></div><div class="kpi"><strong>1</strong><span>最終レコメンド出力</span></div><div class="kpi"><strong>ON/OFF</strong><span>顧客ごとのロジック制御</span></div><div class="kpi"><strong>Hive + Python</strong><span>SQL集計とML処理</span></div></div>
+      </section>
+      <section class="section" id="architecture">
+        <div class="section-head"><h2>Workflowアーキテクチャ</h2><p>親Workflowが実行ロジックを制御し、各ロジックが共通候補プールへ書き込みます。</p></div>
+        <div class="architecture"><div class="arch-step"><b>01 / INPUT</b>Webアクセス<br>購買<br>会員・商品属性</div><div class="arch-arrow">→</div><div class="arch-step"><b>02 / CANDIDATES</b>15ロジック<br>個別dig</div><div class="arch-arrow">→</div><div class="arch-step"><b>03 / SCORE</b>正規化<br>ロジック重み</div><div class="arch-arrow">→</div><div class="arch-step"><b>04 / OUTPUT</b>除外<br>重複排除<br>多様性</div></div>
+        <div class="callout"><strong>設定の中心：</strong> <code>config/params.yml</code>でロジックの有効化、出力単位、推薦数、対象期間、最終重み、カテゴリ/ブランド上限を管理します。</div>
+      </section>
+      <section class="section" id="logics">
+        <div class="section-head"><h2>15種類のレコメンドロジック</h2><p>「今すぐ成果を出す」ロジックから、「データが蓄積してから効く」高度なロジックまで段階的に導入できます。</p></div>
+        <div class="logic-grid">
+          <article class="logic-card"><h3>01. 全体売れ筋</h3><p>サイト全体で、最近よく売れている商品を選びます。まだ好みが分からない人にも使える、レコメンドの「基本の一本」です。</p><span class="detail-label">何を見ている？</span><p class="detail">直近の販売数・購入者数・売上金額。古い売れ筋に偏らないよう、最近の販売を重く評価します。</p><span class="detail-label">どんな時に使う？</span><p class="detail">初回訪問、新規会員、購入履歴が少ない人、他のロジックで候補が足りない時。</p><div class="example"><b>例：</b>「最近このサイトで人気の商品」や、トップページの定番ランキング。</div><span class="tag">新規</span><span class="tag mint">フォールバック</span></article>
+          <article class="logic-card"><h3>02. カテゴリ別売れ筋</h3><p>その人が興味を持っているカテゴリの中から、人気の商品を選びます。「全体人気」より一歩パーソナルな方法です。</p><span class="detail-label">何を見ている？</span><p class="detail">最近よく見ているカテゴリと、そのカテゴリ内の販売実績。</p><span class="detail-label">どんな時に使う？</span><p class="detail">閲覧履歴はあるが購入履歴が少ない人、カテゴリ単位で品ぞろえが多いECサイト。</p><div class="example"><b>例：</b>スニーカーを何度も見た人に、スニーカーカテゴリの人気商品を表示。</div><span class="tag">カテゴリ関心</span><span class="tag mint">コールドスタート</span></article>
+          <article class="logic-card"><h3>03. ブランド別売れ筋</h3><p>その人が関心を示しているブランドの中から、売れ筋や定番商品を提案します。</p><span class="detail-label">何を見ている？</span><p class="detail">ブランドごとの閲覧回数、購入・お気に入り・カート投入などの関心度とブランド内人気。</p><span class="detail-label">どんな時に使う？</span><p class="detail">ブランドロイヤリティが強いアパレル、化粧品、家電、スポーツ用品など。</p><div class="example"><b>例：</b>過去に何度も見たブランドの新作や人気商品を表示。</div><span class="tag">ブランド施策</span><span class="tag orange">ロイヤリティ</span></article>
+          <article class="logic-card"><h3>04. 閲覧履歴</h3><p>最近見た商品をもう一度見せます。興味が明確な人に対して、最も直感的で分かりやすい方法です。</p><span class="detail-label">何を見ている？</span><p class="detail">直近に見た商品、閲覧回数、滞在時間、最後に見た時刻。購入済み商品は目的に応じて除外します。</p><span class="detail-label">どんな時に使う？</span><p class="detail">商品比較中、再訪ユーザー、広告やメールから戻ってきたユーザー。cookie単位でも実施可能。</p><div class="example"><b>例：</b>「最近チェックした商品」「もう一度見る」として商品を表示。</div><span class="tag orange">CTR</span><span class="tag">cookie対応</span></article>
+          <article class="logic-card"><h3>05. カート・お気に入り</h3><p>購入に近い行動をした商品を優先します。売上への距離が近く、CRM施策でも使いやすいロジックです。</p><span class="detail-label">何を見ている？</span><p class="detail">カート投入、お気に入り登録、最後に操作した時刻、購入済みかどうか。</p><span class="detail-label">どんな時に使う？</span><p class="detail">カゴ落ち対策、リマインドメール、購入直前のWeb表示。カート商品が売り切れた場合は代替商品へ切り替えます。</p><div class="example"><b>例：</b>カート投入から24時間以内は商品を再表示、数日後は代替商品やクーポンを提示。</div><span class="tag orange">CVR</span><span class="tag">購入直前</span></article>
+          <article class="logic-card"><h3>06. 再購入予測</h3><p>「そろそろ買い替え・買い足しの時期では？」を、過去の購入間隔から判断します。</p><span class="detail-label">何を見ている？</span><p class="detail">同じ商品を買った回数、購入日と購入日の間隔、前回購入からの経過日数。</p><span class="detail-label">どんな時に使う？</span><p class="detail">食品、日用品、化粧品、ペット用品など、繰り返し購入される商品。</p><div class="example"><b>例：</b>平均45日で購入する商品を、前回購入から40日経過したタイミングで推薦。</div><span class="tag mint">リピート</span><span class="tag">消耗品</span></article>
+          <article class="logic-card"><h3>07. 商品間協調フィルタリング</h3><p>商品同士の「一緒に見られる・買われる」関係を使い、関連商品を提案します。</p><span class="detail-label">何を見ている？</span><p class="detail">同じ人が商品Aと商品Bを見た、または購入した回数。共起が強い組み合わせを候補にします。</p><span class="detail-label">どんな時に使う？</span><p class="detail">商品詳細ページの「こちらもおすすめ」、購入後の関連商品、クロスセル。</p><div class="example"><b>例：</b>カメラを買った人がよく一緒に買うメモリーカードを推薦。</div><span class="tag">クロスセル</span><span class="tag">共起</span></article>
+          <article class="logic-card"><h3>08. バスケット分析</h3><p>同じ注文に入る組み合わせを分析し、「一緒に買うと便利な商品」を見つけます。</p><span class="detail-label">何を見ている？</span><p class="detail">注文単位の商品組み合わせ。Support（組み合わせの多さ）、Confidence（併買される確率）、Lift（偶然以上の強さ）を見ます。</p><span class="detail-label">どんな時に使う？</span><p class="detail">まとめ買い、セット販売、購入完了後のクロスセル、客単価向上。</p><div class="example"><b>例：</b>ワインを買う人がチーズも買う割合が高ければ、チーズを補完商品として表示。</div><span class="tag">客単価</span><span class="tag">併買</span></article>
+          <article class="logic-card"><h3>09. 会員属性フィット</h3><p>年代や性別などが近い会員の購買傾向を使い、その人に合いそうな商品を選びます。</p><span class="detail-label">何を見ている？</span><p class="detail">年代、性別、会員ランクなどの属性と、同じ属性グループで人気の商品。</p><span class="detail-label">どんな時に使う？</span><p class="detail">新規会員や購入履歴が少ない会員、属性ごとにニーズが異なる商品カテゴリ。</p><div class="example"><b>例：</b>「同じ年代・性別の会員に人気」の商品を、本人の閲覧情報と組み合わせて表示。</div><span class="tag">属性</span><span class="tag mint">新規会員</span></article>
+          <article class="logic-card"><h3>10. RFM / 顧客ステージ</h3><p>顧客の「最近買ったか・何回買ったか・いくら買ったか」を見て、状態に合う商品を提案します。</p><span class="detail-label">何を見ている？</span><p class="detail">Recency（最終購入からの日数）、Frequency（購入回数）、Monetary（購入金額）。新規、優良、休眠などに分類します。</p><span class="detail-label">どんな時に使う？</span><p class="detail">F1からF2への転換、優良顧客の育成、休眠復帰、会員ランク別のCRM。</p><div class="example"><b>例：</b>休眠会員には過去に反応したカテゴリや、再購入しやすい価格帯を表示。</div><span class="tag">F1/F2</span><span class="tag orange">休眠復帰</span></article>
+          <article class="logic-card"><h3>11. 購入確率予測（ML）</h3><p>過去データから、「この人が近いうちに買いそうなカテゴリ・商品」を機械学習で予測します。</p><span class="detail-label">何を見ている？</span><p class="detail">閲覧数、セッション数、カート操作、過去購入、属性、最終行動から購入確率を計算します。</p><span class="detail-label">どんな時に使う？</span><p class="detail">データ量が十分にあり、ルールだけでは順位付けしにくい場合。カテゴリ購入予測から始めると安定します。</p><div class="example"><b>例：</b>30日以内に「ジャケット」カテゴリを買う確率が高い会員へ、カテゴリ内商品を表示。</div><span class="tag">Python</span><span class="tag">ML</span></article>
+          <article class="logic-card"><h3>12. ユーザー間CF（Matrix Factorization）</h3><p>購買パターンが似ている人の行動を、行列分解で学習し、自分がまだ買っていない商品を提案します。</p><span class="detail-label">何を見ている？</span><p class="detail">会員×商品を表にし、購入の強さを潜在的な「好みの軸」に分解。PythonのSVDで未購入商品のスコアを推定します。</p><span class="detail-label">どんな時に使う？</span><p class="detail">商品数・会員数・購買履歴が十分にあり、個人ごとの新しい発見を増やしたい時。</p><div class="example"><b>例：</b>似た商品を買う人たちが購入している、本人未購入の商品を発見枠として推薦。</div><span class="tag">Python</span><span class="tag orange">SVD</span></article>
+          <article class="logic-card"><h3>13. 商品属性類似</h3><p>今見ている商品と「特徴が似ている商品」を探します。比較検討中の代替候補に向いています。</p><span class="detail-label">何を見ている？</span><p class="detail">カテゴリ、ブランド、性別ターゲット、価格帯など商品マスタの項目。</p><span class="detail-label">どんな時に使う？</span><p class="detail">欠品時の代替、色・価格違いの比較、商品詳細ページの「似た商品」表示。</p><div class="example"><b>例：</b>見ていたスニーカーと同じカテゴリ・近い価格帯の商品を、購入済みを除いて提示。</div><span class="tag">代替商品</span><span class="tag mint">商品マスタ</span></article>
+          <article class="logic-card"><h3>14. 時間・季節性</h3><p>季節やイベントによって変わるニーズに合わせ、今売れやすい商品を提案します。</p><span class="detail-label">何を見ている？</span><p class="detail">現在の季節、季節に対応するカテゴリ、過去一定期間の販売実績。</p><span class="detail-label">どんな時に使う？</span><p class="detail">衣替え、母の日、年末年始、新生活、セールなど、時期で商品需要が変わる業界。</p><div class="example"><b>例：</b>冬はアウター、春は新生活用品など、季節カテゴリの売れ筋を表示。</div><span class="tag">季節</span><span class="tag">キャンペーン</span></article>
+          <article class="logic-card"><h3>15. バンディット最適化</h3><p>成果が出ている商品を使い続けながら、新商品も少しずつ試し、表示結果から学習します。</p><span class="detail-label">何を見ている？</span><p class="detail">商品ごとの表示回数、クリック、カート投入、購入。Epsilon-Greedyで活用と探索を配分します。</p><span class="detail-label">どんな時に使う？</span><p class="detail">表示・クリック・購入ログが十分にあり、新商品を公平に評価したい時。初期はOFF推奨です。</p><div class="example"><b>例：</b>80%は実績商品、20%は表示回数が少ない商品に割り当てて新商品を探索。</div><span class="tag orange">探索</span><span class="tag">要表示ログ</span></article>
+        </div>
+      </section>
+      <section class="section" id="selection">
+        <div class="section-head"><h2>いつ、どのロジックを使うか</h2><p>目的、顧客状態、データ成熟度の3つで選定すると、導入の優先順位を決めやすくなります。</p></div>
+        <div class="decision"><div class="decision-card purple"><h3>目的から選ぶ</h3><ul><li><b>CTR向上：</b>閲覧履歴、カテゴリ別、ブランド別、季節性</li><li><b>CVR向上：</b>カート・お気に入り、購入確率、属性フィット</li><li><b>客単価・点数：</b>バスケット分析、商品間CF、属性類似</li><li><b>リピート：</b>再購入予測、RFM、ユーザー間CF</li><li><b>新商品浸透：</b>商品属性類似、バンディット探索</li></ul></div><div class="decision-card orange"><h3>顧客状態から選ぶ</h3><ul><li><b>未訪問・新規：</b>全体売れ筋、カテゴリ別売れ筋、属性フィット</li><li><b>閲覧のみ：</b>閲覧履歴、商品属性類似、商品間CF</li><li><b>カート投入：</b>カート・お気に入り、補完商品、代替商品</li><li><b>初回購入後：</b>再購入、バスケット分析、ユーザー間CF</li><li><b>休眠・離脱リスク：</b>RFM、再購入、過去関心カテゴリの売れ筋</li></ul></div></div>
+      </section>
+      <section class="section" id="industries">
+        <div class="section-head"><h2>業界別の活用ポイント</h2><p>同じロジックでも、購入周期・商品特性・顧客接点によって使い分けます。</p></div>
+        <div class="industry-grid">
+          <article class="industry"><h3>EC・アパレル</h3><div class="goal">売上・客単価・クロスセル</div><table><tr><th>主力</th><td>閲覧履歴、ブランド別、商品属性類似、商品間CF</td></tr><tr><th>使い分け</th><td>閲覧中は代替商品、購入後はバスケット分析。会員ランク別に高単価・限定商品を追加。</td></tr><tr><th>注意</th><td>色・サイズ在庫、販売終了、直近購入済みを必ず除外。</td></tr></table></article>
+          <article class="industry"><h3>食品・日用品・化粧品</h3><div class="goal">リピート・購入頻度・定期化</div><table><tr><th>主力</th><td>再購入予測、バスケット分析、ユーザー間CF</td></tr><tr><th>使い分け</th><td>購入間隔が近づいた商品を中心に、定番の補完商品やまとめ買いを提示。</td></tr><tr><th>注意</th><td>一度きり商品と消耗品を分け、購入済み除外を一律にしない。</td></tr></table></article>
+          <article class="industry"><h3>メディア・コンテンツ</h3><div class="goal">回遊・閲覧時間・会員化</div><table><tr><th>主力</th><td>閲覧履歴、商品/コンテンツ共起、セッション行動</td></tr><tr><th>使い分け</th><td>記事・作品・カテゴリの閲覧傾向を使い、関連コンテンツや購読商品へ誘導。</td></tr><tr><th>注意</th><td>商品だけでなくコンテンツIDを共通キーにした拡張が必要。</td></tr></table></article>
+          <article class="industry"><h3>店舗＋EC・オムニチャネル</h3><div class="goal">店舗送客・顧客統合・LTV</div><table><tr><th>主力</th><td>RFM、属性フィット、ユーザー間CF、季節性</td></tr><tr><th>使い分け</th><td>店舗購買とEC閲覧を統合し、商圏・会員ランク・季節イベントで出し分け。</td></tr><tr><th>注意</th><td>店舗/ECの商品・顧客ID統合、在庫店舗、配送条件を整備。</td></tr></table></article>
+          <article class="industry"><h3>旅行・ホテル・レジャー</h3><div class="goal">予約率・付帯売上・再訪</div><table><tr><th>主力</th><td>属性フィット、季節性、商品属性類似、バスケット分析</td></tr><tr><th>使い分け</th><td>旅行時期・同行者・地域・過去予約から、宿泊・体験・付帯サービスを提案。</td></tr><tr><th>注意</th><td>在庫・価格・販売期間・キャンセル規約をリアルタイムに確認。</td></tr></table></article>
+          <article class="industry"><h3>金融・通信・サブスクリプション</h3><div class="goal">利用拡大・継続・解約抑止</div><table><tr><th>主力</th><td>RFM/ステージ、購入確率ML、ユーザー間CF、バンディット</td></tr><tr><th>使い分け</th><td>利用状況・契約ステージ・適合性を踏まえ、次のプランや機能を提案。</td></tr><tr><th>注意</th><td>同意・適合性・説明可能性を優先し、過度なクロスセルを避ける。</td></tr></table></article>
+        </div>
+      </section>
+      <section class="section" id="rollout">
+        <div class="section-head"><h2>推奨導入ステップ</h2><p>最初から高度なMLにせず、データ品質と効果測定を先に整えます。</p></div>
+        <div class="rollout"><div class="phase"><span class="num">1</span><h3>基盤・フォールバック</h3><p>全体売れ筋、カテゴリ別、商品マスタ、在庫、会員/Cookie IDを整備。</p></div><div class="phase"><span class="num">2</span><h3>意向・関連性</h3><p>閲覧履歴、カート、お気に入り、再購入、商品間CF、バスケットを追加。</p></div><div class="phase"><span class="num">3</span><h3>個客最適化</h3><p>属性フィット、RFM、商品属性類似、SVD Matrix Factorizationを導入。</p></div><div class="phase"><span class="num">4</span><h3>学習・最適化</h3><p>購入確率ML、季節性、表示ログを用いたバンディットへ拡張。</p></div></div>
+        <div class="callout"><strong>運用のポイント：</strong> 初期設定は <code>config/params.yml</code> に集約。最終出力は <code>reco_final_output</code>、各候補は <code>reco_all_candidates</code> に保存され、採用ロジックと推薦理由を追跡できます。</div>
+      </section>
+    </div>
+  </main>
+  <footer class="footer"><div class="footer-inner"><span>Treasure AI / Recommendation Workflow Guide</span><span>Internal proposal reference · Built for reusable CDP activation</span></div></footer>
+</body>
+</html>

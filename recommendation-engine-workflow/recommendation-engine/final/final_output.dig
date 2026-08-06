@@ -1,0 +1,18 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
+###############################################################################
+# 最終統合ロジック
+#
+# reco_all_candidates（全ロジックの候補×スコア）を正規化・重み付けし、
+# 多様性制約（カテゴリ/ブランド上限）・除外条件を適用して、
+# ユーザーごとの最終レコメンドリスト（reco_final_output）を作成する。
+###############################################################################
+
++final_output:
+  td>: ../queries/final/final_output.sql
+  create_table: reco_final_output

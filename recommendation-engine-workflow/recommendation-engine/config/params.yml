@@ -1,0 +1,211 @@
+###############################################################################
+# レコメンドエンジン 共通設定ファイル
+#
+# クライアントごとの横展開は、原則このファイルの編集のみで完結させる。
+# - どのロジックを動かすか (enabled)
+# - 出力単位を会員IDにするかcookieにするか (key_column)
+# - 何件推薦するか (top_n)
+# - 集計対象期間 (lookback_days 等)
+# - 最終統合時の重み付け・多様性制約 (final)
+###############################################################################
+
+common:
+  # 出力先データベース
+  database: recommendation_engine
+
+  # 入力データソース（テーブル名はダミー。実データに合わせて変更する）
+  weblog_db: web_log
+  weblog_tbl: agg_weblog          # time, member_id, cookie, td_client_id, event_type,
+                                    # product_id, category_id, brand_id, session_id,
+                                    # dwell_seconds, search_keyword
+
+  order_db: purchase_data
+  order_tbl: orders                # time, order_id, member_id, product_id, category_id,
+                                    # brand_id, quantity, unit_price, amount, coupon_used
+
+  product_db: product_master
+  product_tbl: products            # product_id, category_id, category_name, brand_id,
+                                    # brand_name, product_name, price, margin_rate,
+                                    # stock_qty, sale_status, gender_target, age_band_target
+
+  member_db: member_data
+  member_tbl: members               # member_id, gender, age, age_band, area,
+                                    # member_rank, register_date, email_opt_in
+
+  # cookie / td_client_id ↔ member_id のID統合結果テーブル
+  # （未ログイン行動をログイン後の会員IDに紐付けるためのマッピング）
+  id_mapping_db: member_data
+  id_mapping_tbl: id_mapping        # member_id, cookie, td_client_id, updated_at
+
+# ---------------------------------------------------------------------------
+# ロジックごとの制御
+# key_column: member_id | cookie | td_client_id
+#   -> この列を「顧客の単位」としてGROUP BY/PARTITION BYする。
+#      member_idにすれば会員単位、cookieにすれば匿名含むブラウザ単位で出力される。
+# ---------------------------------------------------------------------------
+logics:
+
+  # 1. 全体売れ筋（パーソナライズなし・新規/データ不足時のフォールバック）
+  bestseller_overall:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 30
+    half_life_days: 14          # 時間減衰の半減期（日）
+
+  # 2. カテゴリ別売れ筋（直近の閲覧カテゴリに応じてパーソナライズ）
+  bestseller_category:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 30
+
+  # 3. ブランド別売れ筋（閲覧・購入ブランド関心度に応じてパーソナライズ）
+  bestseller_brand:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 30
+
+  # 4. 閲覧履歴ベース（直近見た商品・繰り返し閲覧商品）
+  browsing_history:
+    enabled: true
+    key_column: cookie
+    top_n: 10
+    lookback_days: 7
+
+  # 5. カート投入・お気に入りベース（購入直前行動を最優先）
+  cart_favorite:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 30
+
+  # 6. 再購入予測（過去の購入周期から再購入タイミングが近い商品）
+  repurchase:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 365
+    min_purchase_count: 2        # 周期を計算するために必要な最低購入回数
+
+  # 7. 商品間協調フィルタリング（購買・閲覧の共起関係）
+  item_cooccurrence:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 180
+    min_cooccurrence_count: 5     # 共起回数がこれ未満のペアは採用しない
+
+  # 8. 購買バスケット分析（アソシエーション分析：support/confidence/lift）
+  basket_association:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 180
+    min_support_count: 5
+    min_lift: 1.2
+
+  # 9. 属性フィット（年代・性別・価格帯とカテゴリ人気の組み合わせ）
+  attribute_fit:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 30
+
+  # 10. RFM / 顧客ステージ別レコメンド
+  rfm_stage:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 365
+
+  # 11. 機械学習による購入確率予測（実装テンプレート。デフォルトOFF）
+  #     py>オペレータでのモデル学習・推論の型のみ提供。
+  #     実際の特徴量・モデルはクライアント要件に応じて実装する。
+  ml_purchase_probability:
+    enabled: false
+    key_column: member_id
+    top_n: 10
+    observation_days: 90
+    prediction_window_days: 30
+
+  # 12. ユーザー間協調フィルタリング（似た購買傾向を持つ他ユーザーが買った商品を推薦）
+  user_based_cf:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 90
+    min_common_products: 3     # 類似ユーザーと判定するために必要な共通購入商品数
+    max_similar_users: 20      # 類似ユーザーとして採用する上位人数
+
+  # 13. 商品属性ベースの類似レコメンド（カテゴリ/ブランド/性別ターゲット/価格帯の近さで代替商品を推薦）
+  attribute_similarity:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 30
+    price_band_tolerance: 0.2   # 基準商品価格からの許容差（±20%）
+    mode: substitute            # substitute（代替商品）のみ本サンプルで実装。complementary（補完）はカテゴリ相性マスタが必要なため要拡張
+
+  # 14. 時間・季節性レコメンド（現在の季節に対応するカテゴリの売れ筋を推薦）
+  time_seasonality:
+    enabled: true
+    key_column: member_id
+    top_n: 10
+    lookback_days: 365
+    # 季節 -> category_id のマッピング（ダミー値。クライアントのカテゴリ体系に合わせて設定する）
+    season_categories:
+      spring: [101, 102]
+      summer: [201, 202]
+      autumn: [301, 302]
+      winter: [401, 402]
+
+  # 15. マルチアームド・バンディット（Epsilon-Greedy。十分な表示・成果ログが蓄積されてから有効化する）
+  bandit_optimization:
+    enabled: false
+    key_column: member_id
+    top_n: 10
+    lookback_days: 30
+    epsilon: 0.2                # 探索に割り当てる比率（20%を低表示・新商品の検証に使う）
+    min_impressions: 100        # 活用アーム（成果が定まった商品）とみなす最低表示回数
+    impression_db: engagement_log
+    impression_tbl: reco_impressions   # 想定カラム: time, product_id, event_type(impression/click/cart/purchase)
+
+# ---------------------------------------------------------------------------
+# 最終統合ロジックの設定
+# 全ロジックの出力結果（reco_all_candidates）を正規化・重み付けし、
+# ユーザーごとに「どのロジックのどの商品を採用するか」を決定する。
+# ---------------------------------------------------------------------------
+final:
+  enabled: true
+  top_n_per_user: 5
+
+  # 多様性制約（同一カテゴリ/ブランドだけで埋まらないようにする）
+  max_per_category: 3
+  max_per_brand: 2
+
+  # 在庫切れ・販売終了商品を除外するか
+  exclude_out_of_stock: true
+
+  # 直近N日以内に購入済みの商品を除外するか（消耗品中心なら0のままにする）
+  exclude_purchased_within_days: 0
+
+  # ロジックごとの重み。合計1.0でなくても良い（min-max正規化後に相対比較するため）。
+  # クライアントのKPI（CTR重視/売上重視/在庫消化重視 等）に応じて調整する。
+  weights:
+    bestseller_overall: 0.05
+    bestseller_category: 0.10
+    bestseller_brand: 0.08
+    browsing_history: 0.18
+    cart_favorite: 0.18
+    repurchase: 0.12
+    item_cooccurrence: 0.12
+    basket_association: 0.10
+    attribute_fit: 0.07
+    rfm_stage: 0.05
+    ml_purchase_probability: 0.25
+    user_based_cf: 0.10
+    attribute_similarity: 0.08
+    time_seasonality: 0.05
+    bandit_optimization: 0.10

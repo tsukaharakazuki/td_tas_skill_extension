@@ -1,0 +1,10 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
++bestseller_brand:
+  td>: ../queries/bestseller_brand/bestseller_brand.sql
+  insert_into: reco_all_candidates

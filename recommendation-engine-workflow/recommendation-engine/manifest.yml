@@ -1,0 +1,25 @@
+name: recommendation-engine
+profile: treasure_work_us01_7060_213322
+project: recommendation-engine
+owner: tsukahara
+purpose: Web行動・購買・会員属性データからマルチロジックで商品レコメンドを生成し、最終的に1人1商品リストへ統合出力する汎用サンプルWF
+schedule: daily 03:00 JST
+tags:
+  - recommendation
+  - personalization
+  - template
+  - cdp
+tables:
+  reads:
+    - web_log.agg_weblog
+    - purchase_data.orders
+    - product_master.products
+    - member_data.members
+    - engagement_log.reco_impressions
+  writes:
+    - recommendation_engine.reco_all_candidates
+    - recommendation_engine.user_based_cf_interactions
+    - recommendation_engine.reco_user_based_cf
+    - recommendation_engine.ml_features_purchase_probability
+    - recommendation_engine.ml_purchase_probability_scores
+    - recommendation_engine.reco_final_output

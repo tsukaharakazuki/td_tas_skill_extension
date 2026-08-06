@@ -1,0 +1,14 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+  # 現在の月から季節を判定し、config/params.yml の season_categories からカテゴリID一覧を取得する
+  current_month: ${Number(moment(session_time).format("M"))}
+  current_season: ${current_month >= 3 && current_month <= 5 ? "spring" : (current_month >= 6 && current_month <= 8 ? "summer" : (current_month >= 9 && current_month <= 11 ? "autumn" : "winter"))}
+  season_category_ids: ${logics.time_seasonality.season_categories[current_season].join(",")}
+
++time_seasonality:
+  td>: ../queries/time_seasonality/time_seasonality.sql
+  insert_into: reco_all_candidates

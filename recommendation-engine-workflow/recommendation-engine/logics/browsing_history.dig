@@ -1,0 +1,10 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
++browsing_history:
+  td>: ../queries/browsing_history/browsing_history.sql
+  insert_into: reco_all_candidates

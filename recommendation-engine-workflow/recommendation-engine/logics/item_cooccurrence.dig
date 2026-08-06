@@ -1,0 +1,10 @@
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: ${common.database}
+    engine: hive
+
++item_cooccurrence:
+  td>: ../queries/item_cooccurrence/item_cooccurrence.sql
+  insert_into: reco_all_candidates
