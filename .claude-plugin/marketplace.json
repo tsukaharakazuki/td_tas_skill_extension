@@ -69,7 +69,7 @@
       "source": "./",
       "strict": false,
       "skills": [
-        "./datafeed-tools/td-datafeed-workflow"
+        "./td-datafeed-workflow"
       ]
     }
   ]

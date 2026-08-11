@@ -35,19 +35,19 @@ Criteo、RTB House、Yahoo Shopping Adsは、公式仕様を確認するまで�
 2. `CHANNEL_FIELD_MATRIX.md` で連携チャネルを選ぶ。
 3. `SOURCE_TABLE_HEARING.md` に沿ってDB/TBL/カラムを確認する。
 4. `BASE_FEED_SPEC.md` でJOIN設計とBASE出力項目を確認する。
-5. ヒアリング結果をレビューし、`examples/queries/base_feed.sql` を対象環境用に生成・更新する。
+5. ヒアリング結果をレビューし、`td_datafeed/queries/base_feed.sql` を対象環境用に生成・更新する。
 6. BASE検証後に、選択したチャネルのサンプルWorkflowを利用する。
 
 ## ファイル構成
 
 ```text
-datafeed-tools/td-datafeed-workflow/
+td-datafeed-workflow/
 ├── SKILL.md
 ├── README.md
 ├── CHANNEL_FIELD_MATRIX.md
 ├── SOURCE_TABLE_HEARING.md
 ├── BASE_FEED_SPEC.md
-└── examples/
+└── td_datafeed/
     ├── config/params.yml
     ├── td_datafeed.dig
     ├── export.dig
@@ -60,7 +60,7 @@ datafeed-tools/td-datafeed-workflow/
 
 ## 注意
 
-- `examples/` はサンプルです。クライアントのDB/TBL/カラムへ置き換えてください。
+- `td_datafeed/` はサンプルです。クライアントのDB/TBL/カラムへ置き換えてください。
 - `YOUR_*` が残った状態で実行しないでください。
 - コネクタ名、バケット、URL、アカウント情報、認証情報はサンプルへ直書きしません。
 - Workflowのpush・実行・外部ファイル出力は、設定と対象件数を確認し、明示的な承認後に行ってください。
