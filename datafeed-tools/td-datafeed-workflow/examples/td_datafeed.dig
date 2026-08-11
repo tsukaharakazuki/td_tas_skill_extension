@@ -1,0 +1,57 @@
+timezone: ${common.timezone}
+
+_export:
+  !include : 'config/params.yml'
+  td:
+    database: ${common.output_database}
+
+# Generate one base product table, then validate it before building channels.
++create_base:
+  td>: queries/base_feed.sql
+  create_table: datafeed_base
+  engine: presto
+
++validate_base:
+  td>: queries/validate_base_feed.sql
+  store_last_results: true
+  engine: presto
+
++assert_base_not_empty:
+  if>: ${td.last_results.row_count == 0}
+  _do:
+    fail>: "ERROR: datafeed_base is empty (0 rows)"
+
++assert_base_keys:
+  if>: ${td.last_results.missing_id > 0 || td.last_results.missing_sku > 0}
+  _do:
+    fail>: "ERROR: datafeed_base has missing product or SKU keys"
+
+# Build the four enabled channel feeds.
+
++channels:
+  _parallel: true
+
+  +google_merchant:
+    call>: channel_google.dig
+
+  +meta_organic:
+    call>: channel_meta_organic.dig
+
+  +meta_dynamic:
+    call>: channel_meta_dynamic.dig
+
+  +meta_collection:
+    call>: channel_meta_collection.dig
+
+  +criteo_catalog:
+    call>: channel_criteo_catalog.dig
+
+  +rtb_house:
+    call>: channel_rtb_house.dig
+
+  +yahoo_shopping:
+    call>: channel_yahoo_shopping.dig
+
+_error:
+  +notify_error:
+    echo>: "ERROR in td_datafeed: ${error.message}"

@@ -5,8 +5,8 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.3.0",
-    "description": "Treasure Data skill extensions — Excel, Engage, workflow, and recommendation automation"
+    "version": "1.4.0",
+    "description": "Treasure Data skill extensions — Excel, Engage, workflow, recommendation, and datafeed automation"
   },
   "plugins": [
     {
@@ -61,6 +61,15 @@
       "strict": false,
       "skills": [
         "./recommendation-engine-workflow"
+      ]
+    },
+    {
+      "name": "datafeed-tools",
+      "description": "連携チャネルをヒアリングし、必要なDB/TBL/カラムとJOINキーを確認してから、Treasure Dataの商品フィードBASE SQLとチャネル別Workflowを構築する日本語スキル。",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./datafeed-tools/td-datafeed-workflow"
       ]
     }
   ]

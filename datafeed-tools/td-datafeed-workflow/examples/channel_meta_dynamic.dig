@@ -1,0 +1,20 @@
++transform:
+  td>: queries/feed_meta_dynamic.sql
+  create_table: datafeed_meta_dynamic
+  engine: presto
+
++validate:
+  td>: queries/validate_meta_dynamic.sql
+  store_last_results: true
+  engine: presto
+
++assert_not_empty:
+  if>: ${td.last_results.row_count == 0}
+  _do:
+    fail>: "ERROR: datafeed_meta_dynamic is empty (0 rows)"
+
++export:
+  _export:
+    feed_sql: feed_meta_dynamic
+    feed_file_name: ${channels.meta_dynamic.file_name}
+  call>: export.dig

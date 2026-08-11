@@ -1,0 +1,40 @@
+_export:
+  td:
+    database: ${common.output_database}
+
+# Configure and enable only the destinations required by the target environment.
+# Connection names and storage identifiers must be supplied in config/params.yml.
++send_to_onedrive:
+  if>: ${destinations.onedrive.enabled}
+  _do:
+    td>: queries/${feed_sql}.sql
+    database: ${common.output_database}
+    result_connection: ${destinations.onedrive.connection}
+    result_settings:
+      account_type: ${destinations.onedrive.account_type}
+      replace_existing: true
+      file_name: "${feed_file_name}_${session_date_compact}"
+      folder_path: "${destinations.onedrive.folder_path}"
+      domain_name: "${destinations.onedrive.domain_name}"
+      server_relative_path: "${destinations.onedrive.server_relative_path}"
+      charset: UTF-8
+      format: csv
+      compression: ""
+      header_line: 1
+      null_string: default
+      newline: CRLF
+      quote_policy: ALL
+
++send_to_s3:
+  if>: ${destinations.s3.enabled}
+  _do:
+    td>: queries/${feed_sql}.sql
+    database: ${common.output_database}
+    result_connection: ${destinations.s3.connection}
+    result_settings:
+      bucket: ${destinations.s3.bucket}
+      path: "${destinations.s3.path_prefix}/${feed_file_name}_${session_date_compact}.csv"
+      compression: None
+      header: true
+      newline: CRLF
+      "null": "NULL"

@@ -1,0 +1,20 @@
++transform:
+  td>: queries/feed_criteo_catalog.sql
+  create_table: datafeed_criteo_catalog
+  engine: presto
+
++validate:
+  td>: queries/validate_criteo_catalog.sql
+  store_last_results: true
+  engine: presto
+
++assert_not_empty:
+  if>: ${td.last_results.row_count == 0}
+  _do:
+    fail>: "ERROR: datafeed_criteo_catalog is empty (0 rows)"
+
++export:
+  _export:
+    feed_sql: feed_criteo_catalog
+    feed_file_name: ${channels.criteo_catalog.file_name}
+  call>: export.dig

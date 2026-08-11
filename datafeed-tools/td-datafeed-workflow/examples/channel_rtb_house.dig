@@ -1,0 +1,20 @@
++transform:
+  td>: queries/feed_rtb_house.sql
+  create_table: datafeed_rtb_house
+  engine: presto
+
++validate:
+  td>: queries/validate_rtb_house.sql
+  store_last_results: true
+  engine: presto
+
++assert_not_empty:
+  if>: ${td.last_results.row_count == 0}
+  _do:
+    fail>: "ERROR: datafeed_rtb_house is empty (0 rows)"
+
++export:
+  _export:
+    feed_sql: feed_rtb_house
+    feed_file_name: ${channels.rtb_house.file_name}
+  call>: export.dig

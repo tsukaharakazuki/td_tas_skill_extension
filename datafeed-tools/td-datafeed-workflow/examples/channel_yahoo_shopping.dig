@@ -1,0 +1,20 @@
++transform:
+  td>: queries/feed_yahoo_shopping.sql
+  create_table: datafeed_yahoo_shopping
+  engine: presto
+
++validate:
+  td>: queries/validate_yahoo_shopping.sql
+  store_last_results: true
+  engine: presto
+
++assert_not_empty:
+  if>: ${td.last_results.row_count == 0}
+  _do:
+    fail>: "ERROR: datafeed_yahoo_shopping is empty (0 rows)"
+
++export:
+  _export:
+    feed_sql: feed_yahoo_shopping
+    feed_file_name: ${channels.yahoo_shopping.file_name}
+  call>: export.dig

@@ -1,0 +1,108 @@
+# td_datafeed 環境設定
+# YOUR_* は対象クライアントの確認後に置き換えてください。
+# API認証情報はここに保存せず、TDコネクタ/Workflow Secretで管理します。
+
+common:
+  output_database: YOUR_OUTPUT_DATABASE
+  source_database: YOUR_SOURCE_DATABASE
+  category_master_table: YOUR_CATEGORY_MASTER_TABLE
+  store_id: YOUR_STORE_ID
+  stock_location_id: YOUR_STOCK_LOCATION_ID
+  timezone: YOUR_TIMEZONE
+  timezone_name: YOUR_TIMEZONE_NAME
+  timezone_offset: YOUR_TIMEZONE_OFFSET
+  country_code: YOUR_COUNTRY_CODE
+  currency_code: YOUR_CURRENCY_CODE
+  shipping_value: YOUR_COUNTRY_CODE:::YOUR_SHIPPING_COST YOUR_CURRENCY_CODE
+  default_gender: YOUR_DEFAULT_GENDER
+  product_url_prefix: YOUR_PRODUCT_URL_PREFIX
+  image_url_prefix: YOUR_IMAGE_URL_PREFIX
+
+# BASE_FEED_SPEC.md と SOURCE_TABLE_HEARING.md で役割・キー・粒度を確認してから設定します。
+sources:
+  sku_table: YOUR_SKU_TABLE
+  product_table: YOUR_PRODUCT_TABLE
+  description_table: YOUR_DESCRIPTION_TABLE
+  sales_table: YOUR_SALES_TABLE
+  stock_table: YOUR_STOCK_TABLE
+  stock_limit_table: YOUR_STOCK_LIMIT_TABLE
+  display_brand_table: YOUR_DISPLAY_BRAND_TABLE
+  public_brand_table: YOUR_PUBLIC_BRAND_TABLE
+  brand_mapping_table: YOUR_BRAND_MAPPING_TABLE
+  item_tag_table: YOUR_ITEM_TAG_TABLE
+  category_table: YOUR_CATEGORY_MASTER_TABLE
+
+business:
+  normal_minimum_stock: YOUR_NORMAL_MINIMUM_STOCK
+  size_type_keyword: YOUR_SIZE_TYPE_KEYWORD
+  default_size_type: regular
+  matched_size_type: petite
+  size_system: YOUR_SIZE_SYSTEM
+  content_language: YOUR_CONTENT_LANGUAGE
+  age_group: YOUR_AGE_GROUP
+  condition: YOUR_CONDITION
+  free_shipping_label: YOUR_FREE_SHIPPING_LABEL
+
+rules:
+  minimum_stock: YOUR_MINIMUM_STOCK
+  dynamic_start_datetime: YOUR_DYNAMIC_START_DATETIME
+  collection_min_year: YOUR_COLLECTION_MIN_YEAR
+  organic_min_year: YOUR_ORGANIC_MIN_YEAR
+  free_shipping_threshold: YOUR_FREE_SHIPPING_THRESHOLD
+
+channels:
+  google_merchant:
+    file_name: datafeed_google_merchant
+  meta_organic:
+    file_name: datafeed_meta_organic
+    utm_source: YOUR_ORGANIC_UTM_SOURCE
+    utm_medium: YOUR_ORGANIC_UTM_MEDIUM
+    utm_campaign_suffix: YOUR_ORGANIC_UTM_CAMPAIGN_SUFFIX
+  meta_dynamic:
+    file_name: datafeed_meta_dynamic
+    utm_source: YOUR_DYNAMIC_UTM_SOURCE
+    utm_medium: YOUR_DYNAMIC_UTM_MEDIUM
+    utm_campaign_suffix: YOUR_DYNAMIC_UTM_CAMPAIGN_SUFFIX
+  meta_collection:
+    file_name: datafeed_meta_collection
+    utm_source: YOUR_COLLECTION_UTM_SOURCE
+    utm_medium: YOUR_COLLECTION_UTM_MEDIUM
+    utm_campaign_suffix: YOUR_COLLECTION_UTM_CAMPAIGN_SUFFIX
+  criteo_catalog:
+    file_name: datafeed_criteo_catalog
+  rtb_house:
+    file_name: datafeed_rtb_house
+  yahoo_shopping:
+    file_name: datafeed_yahoo_shopping
+
+# 公式仕様の確認が終わるまでREVIEW_REQUIREDのままにします。
+platform_specs:
+  criteo_catalog:
+    status: REVIEW_REQUIRED
+    format: YOUR_CRITEO_FEED_FORMAT
+    delimiter: YOUR_CRITEO_DELIMITER
+    header: YOUR_CRITEO_HEADER_SETTING
+  rtb_house:
+    status: REVIEW_REQUIRED
+    format: YOUR_RTB_HOUSE_FEED_FORMAT
+    delimiter: YOUR_RTB_HOUSE_DELIMITER
+    header: YOUR_RTB_HOUSE_HEADER_SETTING
+  yahoo_shopping:
+    status: REVIEW_REQUIRED
+    format: YOUR_YAHOO_SHOPPING_FEED_FORMAT
+    delimiter: YOUR_YAHOO_SHOPPING_DELIMITER
+    header: YOUR_YAHOO_SHOPPING_HEADER_SETTING
+
+destinations:
+  onedrive:
+    enabled: false
+    connection: YOUR_ONEDRIVE_CONNECTION
+    account_type: business
+    folder_path: YOUR_ONEDRIVE_FOLDER_PATH
+    domain_name: YOUR_ONEDRIVE_DOMAIN_NAME
+    server_relative_path: YOUR_ONEDRIVE_SERVER_RELATIVE_PATH
+  s3:
+    enabled: false
+    connection: YOUR_S3_CONNECTION
+    bucket: YOUR_S3_BUCKET
+    path_prefix: YOUR_S3_PATH_PREFIX
