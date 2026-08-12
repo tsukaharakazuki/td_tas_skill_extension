@@ -1,0 +1,130 @@
+################################################################################
+# cart_abandonment / config/params.example.yml
+#
+# Customer-agnostic configuration template. Copy to params.yml in a
+# customer-owned workflow and replace every <TO_BE_CONFIRMED> value.
+################################################################################
+
+timezone: Asia/Tokyo
+
+td:
+  database: <TARGET_DATABASE>
+  engine: presto
+  table_prefix: <OUTPUT_TABLE_PREFIX>
+
+workflow:
+  name: cart_abandonment
+  nightly_name: cart_abandonment_nightly
+  session_span_seconds: 1800
+  eligibility_delay_minutes: 20
+  purchase_exclusion_hours: 48
+  cart_frequency_cap_per_day: 1
+  total_message_frequency_cap_per_day: 2
+
+schedule:
+  realtime_cron: "<REALTIME_CRON>"
+  nightly_cron: "<NIGHTLY_CRON>"
+  night_window_start: "<NIGHT_WINDOW_START>"
+  night_window_end: "<NIGHT_WINDOW_END>"
+
+media:
+  <MEDIA_KEY>:
+    media_name: <MEDIA_NAME>
+    weblog_database: <WEBLOG_DATABASE>
+    weblog_table: <WEBLOG_TABLE>
+    realtime: <true_or_false>
+    timestamp_column: <TIMESTAMP_COLUMN>
+    primary_cookie_column: <PRIMARY_COOKIE_COLUMN>
+    fallback_cookie_column: <FALLBACK_COOKIE_COLUMN>
+    user_id_column: <USER_ID_COLUMN>
+    user_id_is_hashed: <true_or_false>
+    url_column: <URL_COLUMN>
+    path_column: <PATH_COLUMN>
+    item_payload_column: <ITEM_PAYLOAD_COLUMN_OR_NULL>
+    item_id_column: <ITEM_ID_COLUMN_OR_NULL>
+    item_name_column: <ITEM_NAME_COLUMN_OR_NULL>
+    item_category_column: <ITEM_CATEGORY_COLUMN_OR_NULL>
+    item_price_column: <ITEM_PRICE_COLUMN_OR_NULL>
+    item_order_column: <ITEM_ORDER_COLUMN_OR_NULL>
+    cart_rule: <CART_RULE_DESCRIPTION>
+    purchase_rule: <PURCHASE_RULE_DESCRIPTION>
+    bot_exclusion_rule: <BOT_EXCLUSION_RULE>
+
+sources:
+  recipients:
+    database: <RECIPIENT_DATABASE>
+    table: <RECIPIENT_TABLE>
+    email_column: <EMAIL_COLUMN>
+    identifier_column: <RECIPIENT_IDENTIFIER_COLUMN>
+    consent_predicate: <CONSENT_PREDICATE>
+  orders:
+    enabled: <true_or_false>
+    database: <ORDER_DATABASE_OR_NULL>
+    table: <ORDER_TABLE_OR_NULL>
+    identifier_column: <ORDER_IDENTIFIER_COLUMN_OR_NULL>
+    order_timestamp_column: <ORDER_TIMESTAMP_COLUMN_OR_NULL>
+    cancelled_predicate: <CANCELLED_PREDICATE_OR_NULL>
+  browser_abandonment_history:
+    enabled: <true_or_false>
+    table: <BROWSER_HISTORY_TABLE_OR_NULL>
+
+personalization:
+  max_cart_items: 4
+  recommendations:
+    enabled: <true_or_false>
+    product_master_table: <PRODUCT_MASTER_TABLE_OR_NULL>
+    popularity_table: <POPULARITY_TABLE_OR_NULL>
+    coview_table: <COVIEW_TABLE_OR_NULL>
+    fbt_table: <FBT_TABLE_OR_NULL>
+    order_history_table: <ORDER_HISTORY_TABLE_OR_NULL>
+    stock_table: <STOCK_TABLE_OR_NULL>
+    max_items: 4
+  customer_attributes:
+    enabled: <true_or_false>
+    table: <CUSTOMER_ATTRIBUTES_TABLE_OR_NULL>
+    join_key: <CUSTOMER_ATTRIBUTES_JOIN_KEY_OR_NULL>
+    output_fields: []
+  coupons:
+    enabled: <true_or_false>
+    expiry_date: <YYYY-MM-DD_OR_NULL>
+    expiry_label: <EXPIRY_LABEL_OR_NULL>
+    by_segment: {}
+
+output:
+  send_list_table: <SEND_LIST_TABLE>
+  history_table: <HISTORY_TABLE>
+  suppression_table: <SUPPRESSION_TABLE_OR_NULL>
+  template_fields:
+    - email
+    - cart_item_seq1_item_id
+    - cart_item_seq1_item_name
+    - cart_item_seq1_item_url
+    - cart_item_seq1_image_url
+    - cart_abandon_detected_at
+
+engage:
+  enabled: <true_or_false>
+  connection: <ENGAGE_CONNECTION>
+  workspace_id: <ENGAGE_WORKSPACE_ID>
+  always_on_campaign_id: <ALWAYS_ON_CAMPAIGN_ID>
+  normal_test_campaign_id: <NORMAL_TEST_CAMPAIGN_ID_OR_NULL>
+  low_stock_test_campaign_id: <LOW_STOCK_TEST_CAMPAIGN_ID_OR_NULL>
+  template_id: <TEMPLATE_ID_OR_NULL>
+  template_event_id: <TEMPLATE_EVENT_ID_OR_NULL>
+
+external_connector:
+  enabled: <true_or_false>
+  connection: <CONNECTOR_CONNECTION_OR_NULL>
+  type: <CONNECTOR_TYPE_OR_NULL>
+  destination: <DESTINATION_OBJECT_OR_NULL>
+  required_columns: []
+  test_mode: <true_or_false>
+
+testing:
+  recipients:
+    - <TEST_RECIPIENT_EMAIL>
+  use_plus_aliases: <true_or_false>
+  expected_variant_count: <EXPECTED_VARIANT_COUNT>
+  fixture_mode: <true_or_false>
+
+exclude_hashed_emails: []

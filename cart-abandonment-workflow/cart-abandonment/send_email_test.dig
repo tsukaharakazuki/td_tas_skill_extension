@@ -1,0 +1,120 @@
+################################################################################
+# send_email_test.dig
+#
+# カート放棄メール テスト配信（モード切替式）
+#
+# ⚠️ テスト専用: SQL側で実顧客のメールアドレスをテスト宛先へ置換する。
+#    本番Always-On Campaignではなく、テスト用Campaignを指定すること。
+#
+# 実行例:
+#   tdx wf run cart_abandonment.send_email_test -p test_mode=smoke
+#   tdx wf run cart_abandonment.send_email_test -p test_mode=fixture
+#   tdx wf run cart_abandonment.send_email_test -p test_mode=full
+#
+# モード:
+#   smoke  : 最大表示 / 最小表示を確認（通常・在庫僅少、最大4通）
+#   fixture: カート数・在庫・推薦・ポイントの代表パターンを確認
+#   full   : 送信履歴に存在するパターンを網羅（最大18通）
+################################################################################
+
+_export:
+  td:
+    database: cart_abandonment_db
+    engine: presto
+
+  # 実行時に -p test_mode=smoke|fixture|full で切り替える
+  test_mode: smoke
+  test_recipients: "<TEST_RECIPIENT_EMAIL>"
+
+  engage:
+    connection: "<ENGAGE_CONNECTION>"
+    workspace_id: "<ENGAGE_WORKSPACE_ID>"
+    always_on_campaign_id: "<ALWAYS_ON_CAMPAIGN_ID>"
+    normal_test_campaign_id: "<ALWAYS_ON_CAMPAIGN_ID_NORMAL_TEST>"
+    low_stock_test_campaign_id: "<ALWAYS_ON_CAMPAIGN_ID_LOW_STOCK_TEST>"
+
+# ------------------------------------------------------------------------------
+# smoke: 最初の表示確認。最大表示と最小表示を各テンプレートで確認する。
+# ------------------------------------------------------------------------------
++smoke:
+  if>: ${test_mode == 'smoke'}
+  _do:
+    +normal:
+      td>: queries/send/test/test_send_cart_abandon_normal_first.sql
+      database: cart_abandonment_db
+      result_connection: ${engage.connection}
+      result_settings:
+        type: treasure_engage_v1
+        campaign_type: email
+        campaign_model: always_on
+        workspace_id: ${engage.workspace_id}
+        always_on_campaign_id: ${engage.normal_test_campaign_id}
+        batch_size: 1000
+        thread_count: 1
+
+    +low_stock:
+      td>: queries/send/test/test_send_cart_abandon_low_stock_first.sql
+      database: cart_abandonment_db
+      result_connection: ${engage.connection}
+      result_settings:
+        type: treasure_engage_v1
+        campaign_type: email
+        campaign_model: always_on
+        workspace_id: ${engage.workspace_id}
+        always_on_campaign_id: ${engage.low_stock_test_campaign_id}
+        batch_size: 1000
+        thread_count: 1
+
+# ------------------------------------------------------------------------------
+# fixture: 実データから代表パターンを組み立て、指定した宛先へ送る。
+# ------------------------------------------------------------------------------
++fixture:
+  if>: ${test_mode == 'fixture'}
+  _do:
+    +send:
+      td>: queries/send/test/test_send_cart_abandon_normal_second.sql
+      database: cart_abandonment_db
+      result_connection: ${engage.connection}
+      result_settings:
+        type: treasure_engage_v1
+        campaign_type: email
+        campaign_model: always_on
+        workspace_id: ${engage.workspace_id}
+        always_on_campaign_id: ${engage.always_on_campaign_id}
+        batch_size: 1000
+        thread_count: 1
+
+# ------------------------------------------------------------------------------
+# full: 送信履歴に存在するパターンを通常版・在庫僅少版ともに網羅する。
+# ------------------------------------------------------------------------------
++full:
+  if>: ${test_mode == 'full'}
+  _do:
+    +normal:
+      td>: queries/send/test/test_send_cart_abandon_normal.sql
+      database: cart_abandonment_db
+      result_connection: ${engage.connection}
+      result_settings:
+        type: treasure_engage_v1
+        campaign_type: email
+        campaign_model: always_on
+        workspace_id: ${engage.workspace_id}
+        always_on_campaign_id: ${engage.normal_test_campaign_id}
+        batch_size: 1000
+        thread_count: 1
+
+    +low_stock:
+      td>: queries/send/test/test_send_cart_abandon_low_stock.sql
+      database: cart_abandonment_db
+      result_connection: ${engage.connection}
+      result_settings:
+        type: treasure_engage_v1
+        campaign_type: email
+        campaign_model: always_on
+        workspace_id: ${engage.workspace_id}
+        always_on_campaign_id: ${engage.low_stock_test_campaign_id}
+        batch_size: 1000
+        thread_count: 1
+
++log_test_done:
+  echo>: "カート放棄テスト配信完了 mode=${test_mode}"

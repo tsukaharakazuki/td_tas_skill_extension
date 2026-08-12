@@ -5,8 +5,8 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.4.0",
-    "description": "Treasure Data skill extensions — Excel, Engage, workflow, recommendation, and datafeed automation"
+    "version": "1.5.0",
+    "description": "Treasure Data skill extensions — Excel, Engage, workflow, recommendation, datafeed, and cart-abandonment automation"
   },
   "plugins": [
     {
@@ -70,6 +70,15 @@
       "strict": false,
       "skills": [
         "./td-datafeed-workflow"
+      ]
+    },
+    {
+      "name": "cart-abandonment-workflow",
+      "description": "Use when creating, customizing, generalizing, validating, or deploying a Treasure Data cart-abandonment email workflow. Covers Web log and cart/purchase logic interviews, Engage Studio Always-On Campaign integration, external connectors, personalization, and safe test email delivery.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./cart-abandonment-workflow"
       ]
     }
   ]
