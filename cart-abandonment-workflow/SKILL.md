@@ -1,203 +1,203 @@
 ---
 name: cart-abandonment-workflow
-description: Use when the user wants to create, customize, generalize, validate, or deploy a Treasure Data cart-abandonment email workflow. Covers customer-agnostic Digdag workflow construction, Web log source and cart/purchase logic interviews, Engage Studio Always-On Campaign integration, external connector mappings, recommendation/points/coupon options, dummy-data test email delivery, and workflow validation. Trigger on カート放棄, カート離脱, abandoned cart, cart abandonment, cart-abandonment workflow, or requests to reuse the cart-abandonment sample for another customer.
+description: Treasure Dataのカート放棄メールWorkflowを作成、汎用化、カスタマイズ、検証、デプロイするときに使用する。Digdag Workflowの構築、Webログ・カート・購入条件のヒアリング、Engage Studio Always-On Campaign連携、外部コネクタ連携、レコメンド・ポイント・クーポン設定、ダミーデータによるテストメール配信、Workflow検証を支援する。「カート放棄」「カート離脱」「abandoned cart」「cart abandonment」「カート放棄Workflow」「別顧客向けにカート放棄サンプルを展開」などで発動する。
 ---
 
-# Cart-Abandonment Workflow Builder
+# カート放棄Workflow構築Skill
 
-Build a reusable Treasure Data Workflow (Digdag) for cart-abandonment email delivery. Treat the included workflow sample as a reference implementation, not as a customer configuration. Never carry customer, brand, account, campaign, URL, coupon, recipient, or internal table identifiers into a new customer's workflow.
+Treasure Dataでカート放棄メールを配信するための、汎用的なWorkflow（Digdag）を構築する。付属のWorkflowサンプルは参考実装であり、特定顧客の設定ではない。新しい顧客向けのWorkflowに、顧客名、ブランド名、アカウント情報、キャンペーン、URL、クーポン、宛先、内部テーブル識別子を引き継がない。
 
-## Package Layout
+## パッケージ構成
 
-Keep the implementation split into two locations:
+実装は次の2箇所に分ける。
 
 ```text
 .claude/skills/cart-abandonment-workflow/
-└── SKILL.md                         # this orchestration and interview guide
+└── SKILL.md                         # オーケストレーションとヒアリング手順
 
 cart-abandonment-workflow/cart-abandonment/
-├── README.md                        # sample scope and customization map
-├── config/params.example.yml        # placeholders and customer inputs
-├── *.dig                            # workflow and test entry points
-├── queries/                         # SQL templates
-└── tdx.json                         # generic local project metadata
+├── README.md                        # サンプルの範囲とカスタマイズ箇所
+├── config/params.example.yml        # プレースホルダーと顧客入力項目
+├── *.dig                            # Workflowとテストのエントリーポイント
+├── queries/                         # SQLテンプレート
+└── tdx.json                         # 汎用Workflowプロジェクトのメタデータ
 ```
 
-Use the sample under `cart-abandonment-workflow/cart-abandonment/` as the starting point. Keep customer-specific values in a customer-owned copy of `config/params.yml` or in workflow exports; do not put real credentials or API keys in the sample.
+開始時は `cart-abandonment-workflow/cart-abandonment/` のサンプルを使用する。顧客固有の値は顧客用コピーの `config/params.yml` またはWorkflowの `_export` に記載し、サンプルに実際の認証情報やAPIキーを入れない。
 
-## Operating Rules
+## 運用ルール
 
-1. Load the `workflow-skills:digdag` skill before editing or deploying `.dig` files.
-2. Use Trino/Presto SQL conventions appropriate to the project. Prefer `tdx wf validate` for syntax/configuration checks.
-3. Do not run a live workflow or send a real campaign until the user explicitly confirms the scope and destination. For `tdx wf run`, preview with `--dry-run` first and explain external sends.
-4. Treat test email delivery as an external side effect. Confirm the exact test recipient(s), expected message count, and campaign before running it.
-5. Do not invent source columns, table names, consent rules, campaign IDs, connector fields, or cart semantics. Ask, inspect, or mark them as unresolved placeholders.
-6. Preserve privacy: use hashed identifiers for joins where appropriate, query only opted-in recipients, and exclude staff/test accounts through configuration.
-7. Keep the sample customer-agnostic. Avoid customer-specific brand names, account IDs, internal email addresses, customer domains, and customer-specific campaign or template IDs.
+1. `.dig` ファイルを編集またはデプロイする前に `workflow-skills:digdag` Skillを読み込む。
+2. プロジェクトに適したTrino/Presto SQLの規約を使用する。構文・設定確認には `tdx wf validate` を優先する。
+3. ユーザーが対象範囲と配信先を明示的に確認するまで、本番Workflowを実行したり本番キャンペーンを送信したりしない。`tdx wf run` の前には `--dry-run` で確認し、外部送信の内容を説明する。
+4. テストメールも外部副作用として扱う。実行前に、正確なテスト宛先、想定メッセージ数、使用キャンペーンを確認する。
+5. ソースカラム、テーブル名、同意条件、キャンペーンID、コネクタ項目、カート条件を推測しない。不明な場合は調査するか、未解決のプレースホルダーとして残す。
+6. 適切な場合はハッシュ化識別子でJOINし、配信許諾済みの宛先だけを取得する。スタッフ・テストアカウントは設定で除外する。
+7. サンプルは顧客非依存に保つ。顧客固有のブランド名、アカウントID、社内メールアドレス、顧客ドメイン、キャンペーンID、テンプレートIDを記載しない。
 
-## Build Process
+## 構築手順
 
-### 1. Establish the delivery route
+### 1. 配信経路を確定する
 
-Ask which route applies:
+最初に次のどちらかを確認する。
 
-- **Engage Studio Always-On Campaign**: retain the basic pattern of creating a send-list table and using a `td>` result export with `treasure_engage_v1`. Obtain the already-planned Always-On Campaign information before writing the final workflow.
-- **External connector**: identify connector type, destination object/list/campaign, authentication/connection name, required columns, consent/opt-out fields, and connector-specific transformations. Write SQL to produce exactly the connector's required schema.
+- **Engage Studio Always-On Campaign**：送信リストテーブルを作成し、`treasure_engage_v1` の `td>` 結果エクスポートで配信する基本構成を維持する。最終Workflowを書く前に、すでに作成済みまたは配信予定のAlways-On Campaign情報を取得する。
+- **外部コネクタ**：コネクタの種類、送信先オブジェクト・リスト・キャンペーン、認証・接続名、必須カラム、配信許諾・オプトアウト項目、コネクタ固有の変換を確認する。SQLはコネクタが要求するスキーマを正確に出力するよう作成する。
 
-For Engage Studio, collect at minimum:
+Engage Studioの場合は、最低限次を確認する。
 
-- Engage connection name
-- workspace ID
-- Always-On Campaign ID(s), including separate normal/low-stock campaigns if applicable
-- template/event identifier(s), if used for history or branching
-- expected input column names and Liquid variables
-- whether one template handles all variants or separate campaigns/templates are used
+- Engageの接続名
+- Workspace ID
+- Always-On Campaign ID（通常版・在庫僅少版など複数ある場合はすべて）
+- 履歴保存や分岐で使用するテンプレートID・イベントID
+- 受け渡すカラム名とLiquid変数
+- 1つのテンプレートで全バリエーションを処理するか、複数のテンプレート・キャンペーンを使うか
 
-If no campaign exists, stop short of live-send configuration and produce a clearly marked placeholder plus a campaign-input checklist.
+キャンペーンがまだ存在しない場合は、本番配信設定を確定せず、プレースホルダーとキャンペーン情報の確認リストを出力する。
 
-### 2. Inspect the customer's data model
+### 2. 顧客のデータモデルを確認する
 
-Ask for or inspect the following before writing cart SQL:
+カート放棄SQLを書く前に、次の情報を調査またはヒアリングする。
 
-- Real-time Web log database and table
-- event timestamp column and timezone
-- cookie/visitor identifiers and fallback order
-- stable user identifier (hashed email, email, member ID, or other key)
-- URL/path column and the cart-page rule
-- item payload format: one row per item or JSON array; item ID/name/category/price/order fields
-- purchase completion signal and purchase/order table
-- recipient/consent table and how the stable identifier joins to a deliverable email
-- optional product master, stock, recommendation, customer attribute/points, suppression, and order-history tables
-- whether browser/cart abandonment history is shared for frequency capping
+- リアルタイムWebログのDBとテーブル
+- イベント時刻カラムとタイムゾーン
+- Cookie・訪問者識別子とフォールバック順
+- 安定したユーザー識別子（ハッシュ化メール、メール、会員IDなど）
+- URL・パスのカラムとカートページの条件
+- 商品データの形式（1商品1行かJSON配列か）、商品ID・商品名・カテゴリ・価格・順序のカラム
+- 購入完了シグナルと購入・注文テーブル
+- 配信先・同意テーブル、および識別子から配信可能なメールアドレスへのJOIN方法
+- 任意の情報源（商品マスタ、在庫、レコメンド、顧客属性・ポイント、抑止、注文履歴）
+- カート放棄とブラウザ放棄で頻度キャップの履歴を共有するか
 
-If the Web log is not real-time, explicitly explain that the workflow cannot reliably detect recent abandonment without accepting the source latency. Offer a batch window based on the available data instead of silently assuming real time.
+Webログがリアルタイムでない場合、最近のカート放棄を正確に検知できないことと、データソースの遅延を受け入れる必要があることを明示する。リアルタイムと仮定して進めず、利用可能なバッチ時間帯に合わせて対象期間を設計する。
 
-### 3. Confirm cart-abandonment semantics
+### 3. カート放棄ロジックを確認する
 
-Use concrete examples and ask the user to decide each rule. Record the answers in the customer configuration before generating SQL:
+具体例を使い、各ルールをユーザーに確認する。SQL生成前に回答を顧客設定へ記録する。
 
-- What event means “cart activity” (cart page view, add-to-cart event, checkout start, or another event)?
-- How long is the inactivity/session boundary?
-- How many minutes must elapse before a session becomes eligible?
-- What proves a purchase: thank-you page, order record, or both?
-- How long after an order should the user be excluded?
-- Should the workflow target all cart items or only the latest item / up to N items?
-- What happens when the same user has multiple carts or devices?
-- Should empty/guest carts be excluded?
-- What consent and suppression rules apply?
-- What is the per-user frequency cap: same flow per day, all messages per day, or rolling hours?
-- What are the schedule and night-window rules?
+- 「カート操作」とみなすイベントは何か（カートページ閲覧、カート追加、チェックアウト開始など）
+- セッションの無操作時間・区切りは何分か
+- セッション終了後、何分経過すれば配信対象にするか
+- 購入完了を何で判定するか（サンクスページ、注文レコード、両方）
+- 注文後、何時間ユーザーを除外するか
+- カート内の全商品を対象にするか、最新商品だけ・最大N件にするか
+- 同一ユーザーが複数カート・複数デバイスを持つ場合の扱い
+- 空カート・ゲストカートを除外するか
+- 配信許諾と抑止の条件
+- ユーザーごとの頻度キャップ（同一施策1日1通、全メッセージ1日N通、ローリング時間など）
+- スケジュールと夜間処理の時間帯
 
-Translate the answers into explicit `WHERE`, sessionization, purchase exclusion, consent, and frequency-cap clauses. Show a short example such as “cart view at 10:00, purchase at 10:20, workflow at 10:30” and ask whether the person should be sent.
+回答を明確な `WHERE` 条件、セッション化、購入除外、同意確認、頻度キャップへ変換する。例えば「10:00にカート閲覧、10:20に購入、10:30にWorkflow実行」のケースを示し、配信するかを確認する。
 
-### 4. Decide personalization scope
+### 4. パーソナライズ範囲を決める
 
-Ask which fields the email needs:
+メールに必要な項目を確認する。
 
-- cart product fields and maximum item count
-- stock/availability and low-stock flags
-- recommendation fields and recommendation count
-- customer points/attributes
-- coupon code/image/description/expiry
-- campaign-specific or segment-specific fields
+- カート商品項目と最大商品数
+- 在庫・公開状態・在庫僅少フラグ
+- レコメンド項目と件数
+- 顧客ポイント・属性
+- クーポンコード・画像・説明・有効期限
+- キャンペーン固有・セグメント固有の項目
 
-Support these modes:
+次の構成を選べるようにする。
 
-- cart items only
-- cart items plus product/stock enrichment
-- cart items plus recommendations
-- cart items plus customer attributes
-- no personalization beyond recipient and basic cart data
+- カート商品だけ
+- カート商品と商品・在庫情報
+- カート商品とレコメンド
+- カート商品と顧客属性
+- 宛先と基本的なカート情報だけ
 
-If recommendations are not available or not desired, remove recommendation joins and output empty recommendation fields rather than retaining sample tables. If points/coupons are not used, remove those joins/columns and keep the template contract minimal.
+レコメンドが利用できない、または不要な場合は、レコメンドJOINを削除し、レコメンド項目を空にする。ポイントやクーポンを使わない場合もJOINとカラムを削除し、テンプレートの受け渡し項目を最小限にする。
 
-### 5. Configure the workflow
+### 5. Workflowを設定する
 
-Create a customer copy from the sample and replace placeholders in configuration first. Use clear generic workflow names such as:
+サンプルから顧客用コピーを作成し、最初に設定のプレースホルダーを置き換える。Workflow名は次のような汎用名にする。
 
 - `cart_abandonment`
 - `cart_abandonment_nightly`
 - `cart_abandonment_send`
 - `cart_abandonment_test`
 
-Use one mode-driven test workflow rather than separate first/second/full entry points. Select `smoke`, `fixture`, or `full` with `-p test_mode=...`; keep the SQL fixtures/history queries separate only when their data-selection logic differs.
+テスト段階ごとに複数の `.dig` エントリーポイントを作らず、モード切替式のテストWorkflowを1つ使う。`-p test_mode=...` で `smoke`、`fixture`、`full` を選択し、データ抽出ロジックが異なる場合だけSQLを分ける。
 
-Parameterize at least:
+最低限、次の項目をパラメータ化する。
 
-- target database and table prefix
-- Web log source
-- recipient and order sources
-- identifier/cookie columns
-- cart and purchase rules
-- schedule/time windows
-- output/history table names
-- optional enrichment tables
-- Engage connection/workspace/campaign identifiers or external connector settings
-- template field contract
-- test recipients and test message variants
+- 対象DBと出力テーブルのプレフィックス
+- Webログの取得元
+- 配信先・注文データの取得元
+- 識別子・Cookieカラム
+- カート・購入ルール
+- スケジュール・時間帯
+- 出力・履歴テーブル名
+- 任意のエンリッチメントテーブル
+- Engageの接続・Workspace・キャンペーン情報または外部コネクタ設定
+- テンプレートの項目仕様
+- テスト宛先とテストバリエーション
 
-Keep SQL aliases and output field names stable when the destination template expects them. Add or remove fields only after confirming the template/connector contract.
+配信先テンプレートが期待する場合は、SQLの別名と出力項目名を安定させる。カラムの追加・削除はテンプレートまたはコネクタの仕様確認後に行う。
 
-### 6. Build the test-email path
+### 6. テストメール経路を作成する
 
-For Engage Studio, create a test workflow that:
+Engage Studio向けには、次のテストWorkflowを作成する。
 
-1. reads representative rows from the generated send-list or a controlled fixture;
-2. replaces the real recipient with the confirmed test address(es), never the live audience;
-3. fills missing recommendation, stock, points, coupon, and cart fields with deterministic dummy values so every template branch can be rendered;
-4. uses the confirmed test Always-On Campaign ID and Engage connection;
-5. supports small staged tests: basic rendering first, then all personalization combinations;
-6. logs the expected variants and recipient count.
+1. 生成済み送信リストまたは管理されたテスト用データから代表行を取得する。
+2. 実際の配信先を使わず、確認済みのテストアドレスへ置き換える。
+3. レコメンド、在庫、ポイント、クーポン、カート項目の不足値を決定的なダミー値で埋め、テンプレートの全分岐を表示できるようにする。
+4. 確認済みのテスト用Always-On CampaignとEngage接続を使う。
+5. 最初は基本表示、その後にパーソナライズの組み合わせを確認する段階的なテストにする。
+6. 想定バリエーションと宛先件数をログに残す。
 
-Ask and confirm:
+次の項目を確認する。
 
-- exact test email address(es)
-- whether plus-address aliases are allowed
-- number of variants/messages expected
-- which campaign/template receives the test
-- whether the test campaign is isolated from production
+- 正確なテストメールアドレス
+- `+` 付きエイリアスを使えるか
+- 想定するバリエーション数・メール数
+- テスト対象のキャンペーン・テンプレート
+- テストキャンペーンが本番から分離されているか
 
-Do not execute a test send until the recipient, campaign, and expected scope are explicitly confirmed. For an external connector, use its sandbox/test mode where available and verify the destination schema before sending.
+テスト送信は、宛先、キャンペーン、対象範囲を明示的に確認するまで実行しない。外部コネクタの場合は、可能ならサンドボックス・テストモードを利用し、送信前に送信先スキーマを確認する。
 
-### 7. Validate before deployment
+### 7. デプロイ前に検証する
 
-Run local/static checks:
+次のローカル・静的チェックを実行する。
 
-- scan all files for residual customer-specific names, domains, UUIDs, account IDs, email addresses, coupon codes, and URLs;
-- validate YAML and Digdag structure;
-- validate SQL references and destination columns;
-- confirm every `${...}` variable is defined by `_export`, workflow parameters, or the documented runtime;
-- confirm every source table and column was supplied by the customer;
-- verify consent, purchase exclusion, frequency cap, and timezone behavior;
-- verify test SQL cannot select live recipients;
-- inspect the dry-run task graph before any run.
+- 顧客固有の名前、ドメイン、UUID、アカウントID、メールアドレス、クーポンコード、URLが残っていないか検索する。
+- YAMLとDigdag構造を検証する。
+- SQLの参照先と出力カラムを検証する。
+- すべての `${...}` 変数が `_export`、Workflowパラメータ、または文書化されたランタイム変数で定義されていることを確認する。
+- すべてのソーステーブルとカラムが顧客から提供されたものか確認する。
+- 配信許諾、購入除外、頻度キャップ、タイムゾーンの動作を確認する。
+- テストSQLが本番宛先を取得できないことを確認する。
+- 実行前にdry-runのタスクグラフを確認する。
 
-Report unresolved placeholders explicitly. Do not claim the workflow is production-ready while any required source, campaign, connector, template, consent, or test-recipient input is unresolved.
+未解決のプレースホルダーは明示的に報告する。必要なデータソース、キャンペーン、コネクタ、テンプレート、同意条件、テスト宛先が未確定の状態で「本番利用可能」と報告しない。
 
-## Required Interview Record
+## ヒアリング記録の形式
 
-Maintain a concise configuration record, for example:
+次のような簡潔な設定記録を維持する。
 
 ```yaml
 customer:
-  name: "<customer-supplied name>"
+  name: "<顧客から提示された名前>"
 delivery:
   route: engage_studio | external_connector
-  connection: "<name>"
-  workspace_id: "<id>"
+  connection: "<接続名>"
+  workspace_id: "<ID>"
   always_on_campaign_ids: []
 data:
-  weblog: "<db.table>"
-  recipients: "<db.table>"
-  orders: "<db.table or none>"
-  identifier: "<column and hash rule>"
+  weblog: "<DB.テーブル>"
+  recipients: "<DB.テーブル>"
+  orders: "<DB.テーブル または none>"
+  identifier: "<カラムとハッシュ化ルール>"
 logic:
-  cart_rule: "<event/path predicate>"
-  purchase_rule: "<predicate>"
+  cart_rule: "<イベント・パス条件>"
+  purchase_rule: "<判定条件>"
   eligibility_delay_minutes: 20
   purchase_exclusion_hours: 48
   session_timeout_seconds: 1800
-  frequency_cap: "<rule>"
+  frequency_cap: "<ルール>"
 personalization:
   cart_items: true
   recommendations: false
@@ -209,35 +209,35 @@ testing:
   variants: []
 ```
 
-Use placeholders such as `<TO_BE_CONFIRMED>` rather than copying values from the reference sample.
+サンプルの値をコピーせず、`<TO_BE_CONFIRMED>` のようなプレースホルダーを使う。
 
-## Output Format
+## 出力形式
 
-When guiding or completing a build, report in this order:
+構築を案内または完了したときは、次の順番で報告する。
 
-1. **Confirmed configuration** — delivery route, sources, cart/purchase rules, personalization, and test scope.
-2. **Workflow artifacts** — paths of the skill, sample, customer copy, SQL, and test entry points.
-3. **Pending confirmations** — only blockers or decisions still needed.
-4. **Validation status** — checks run, dry-run status, and any unresolved references.
-5. **Send safety** — state whether no send occurred, a test send is awaiting confirmation, or a confirmed test was executed with recipient count and campaign.
+1. **確定した設定** — 配信経路、データソース、カート・購入ルール、パーソナライズ、テスト範囲
+2. **Workflow成果物** — Skill、サンプル、顧客用コピー、SQL、テストエントリーポイントのパス
+3. **未確認事項** — 残っているブロッカーまたは判断事項だけ
+4. **検証状況** — 実施したチェック、dry-run状況、未解決の参照
+5. **送信安全性** — 送信していない、テスト送信の確認待ち、または確認済みテストを実行済みか。実行済みなら宛先数とキャンペーンを記載
 
-## Example: Engage Studio Customer
+## 例：Engage Studioの顧客
 
-**Input:** “Use our real-time table `shop.web_events`, cart path `/cart`, send through an existing Always-On Campaign, and include cart items but no recommendations.”
+**入力例：**「リアルタイムテーブル `shop.web_events` を使い、カートパスは `/cart`。既存のAlways-On Campaignから配信し、レコメンドなしでカート商品だけを表示したい。」
 
-**Action:** Ask for the exact event/identifier/item columns, consent table and join, purchase signal/order exclusion, campaign/workspace/connection IDs, template variables, schedule, and test recipients. Remove recommendation joins from the sample and produce only the confirmed cart fields. Validate before presenting a dry-run.
+**対応：** 正確なイベント、識別子、商品カラム、同意テーブルとJOIN、購入シグナル・注文除外、キャンペーン・Workspace・接続ID、テンプレート変数、スケジュール、テスト宛先を確認する。サンプルからレコメンドJOINを削除し、確定したカート項目だけを出力する。検証後にdry-runを提示する。
 
-## Example: External Connector Customer
+## 例：外部コネクタの顧客
 
-**Input:** “Send abandoned carts to our CRM connector; it needs `email`, `sku`, `quantity`, and `cart_updated_at`.”
+**入力例：**「カート放棄者をCRMコネクタへ送りたい。必要な項目は `email`、`sku`、`quantity`、`cart_updated_at`。」
 
-**Action:** Ask for connector type/name, destination object, auth setup, consent/suppression rule, one-to-many item handling, timestamp format, and deduplication key. Build a connector-specific SQL projection and use sandbox/test mode before live delivery.
+**対応：** コネクタの種類・名前、送信先オブジェクト、認証設定、配信許諾・抑止条件、商品が複数ある場合の表現、時刻形式、重複排除キーを確認する。コネクタ専用のSQL出力を作成し、サンドボックス・テストモードで確認する。
 
-## Edge Cases
+## 特殊ケース
 
-- **No real-time data:** state the detection delay and redesign eligibility windows around source freshness.
-- **No stable identifier:** do not promise email delivery; request a resolvable recipient join or limit the workflow to an anonymous audience use case.
-- **No purchase table/signal:** ask whether a thank-you event is sufficient; otherwise mark purchase exclusion as a production blocker.
-- **No recommendation data:** disable recommendation fields and simplify the template contract.
-- **Multiple campaigns/templates:** map each output variant to an explicit campaign and test each branch separately.
-- **Customer asks to deploy immediately:** still preview and obtain explicit confirmation before any external send.
+- **リアルタイムデータがない：** 検知の遅延を説明し、データ鮮度に合わせて対象時間を設計する。
+- **安定した識別子がない：** メール配信を約束せず、解決可能な宛先JOINを確認する。匿名ユーザー向けの用途に限定する選択肢も示す。
+- **購入テーブル・購入シグナルがない：** サンクスイベントだけで十分か確認する。購入除外ができない場合は本番ブロッカーとして扱う。
+- **レコメンドデータがない：** レコメンド項目を無効化し、テンプレート仕様を簡素化する。
+- **キャンペーン・テンプレートが複数ある：** 出力バリエーションごとに明確なキャンペーンを割り当て、各分岐を個別にテストする。
+- **すぐデプロイしたいと言われた：** それでもdry-runを先に実施し、外部送信前に明示的な確認を得る。

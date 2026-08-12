@@ -1,21 +1,23 @@
-# Cart Abandonment Workflow Sample
+# カート放棄Workflowサンプル
 
-Customer-agnostic Treasure Data Workflow (Digdag) reference for detecting eligible abandoned carts, preparing a send list, and optionally delivering through an Engage Studio Always-On Campaign.
+カート放棄の対象者を検出し、送信リストを作成し、必要に応じてEngage StudioのAlways-On Campaignへ配信するための、顧客非依存のTreasure Data Workflow（Digdag）サンプルです。
 
-This directory is a template only. It contains no customer credentials and must not be deployed without completing `config/params.example.yml` and the interview in `cart-abandonment-workflow/SKILL.md`.
+このディレクトリはテンプレートです。`.claude/skills/cart-abandonment-workflow/SKILL.md` のヒアリングを完了し、`config/params.example.yml` を顧客用の設定へ置き換えてから使用してください。
 
-## Included flow
+## 処理フロー
 
-1. Read a real-time or batch Web log source.
-2. Sessionize visitor activity.
-3. Identify cart-abandonment candidates after an inactivity delay.
-4. Exclude purchasers, unsubscribed users, suppressed users, and frequency-cap violations.
-5. Enrich cart items with optional product, stock, recommendation, points, or coupon data.
-6. Create a stable send-list table.
-7. Optionally export to Engage Studio through a configured Always-On Campaign.
-8. Provide one mode-driven test workflow that replaces recipients and fills template variables with deterministic fixtures.
+1. リアルタイムまたはバッチのWebログを読み込む。
+2. 訪問者の行動をセッション化する。
+3. 無操作時間を経過したカート放棄候補を抽出する。
+4. 購入者、配信停止者、抑止対象者、頻度キャップ超過者を除外する。
+5. 商品、在庫、レコメンド、ポイント、クーポン情報を必要に応じて付与する。
+6. 配信用の送信リストを作成する。
+7. 設定済みのAlways-On Campaignへ任意で結果をエクスポートする。
+8. 宛先をテスト用に置き換え、テンプレート変数をダミー値で埋めるモード切替式テストを実行する。
 
-The test entry point is `send_email_test.dig`. Select a test scope with `-p test_mode=smoke`, `-p test_mode=fixture`, or `-p test_mode=full`; separate `.dig` files for each test phase are intentionally avoided.
+## テストの実行
+
+テストのエントリーポイントは `send_email_test.dig` です。テスト段階ごとに複数の `.dig` ファイルを作らず、次のモードで切り替えます。
 
 ```bash
 tdx wf run cart_abandonment.send_email_test -p test_mode=smoke
@@ -23,27 +25,22 @@ tdx wf run cart_abandonment.send_email_test -p test_mode=fixture
 tdx wf run cart_abandonment.send_email_test -p test_mode=full
 ```
 
-Before any test send, set the test recipient and isolated test campaign in the customer configuration and confirm the expected message count.
+SQLはデータ抽出方法が異なるため、smoke、fixture、fullの用途別に分かれています。
 
-The SQL files remain separate where their data-selection logic differs: smoke samples representative history rows, fixture builds controlled combinations, and full covers available history patterns.
+## 顧客ごとに確認する設定
 
-    
-## Customer configuration required
+- 対象DBと出力テーブルのプレフィックス
+- Webログの取得元とデータ鮮度
+- 識別子、Cookie、商品カラム
+- カート条件と購入条件
+- 配信先・同意データの取得元
+- 注文除外期間と頻度キャップ
+- パーソナライズ項目とテンプレート仕様
+- Engage Studioのキャンペーン、Workspace、接続、または外部コネクタ設定
+- テスト宛先とテストキャンペーン
 
-- database and output table prefix
-- Web log source and freshness
-- identifier/cookie and item columns
-- cart and purchase predicates
-- recipient/consent source
-- order exclusion window and frequency cap
-- personalization fields and template contract
-- Engage Studio campaign/workspace/connection or external connector mapping
-- test recipients and test campaign
+## 命名と安全性
 
-## Naming policy
+サンプルでは `cart_abandonment`、`source_web_events`、`target_cart_send_list` のような汎用名を使用しています。顧客用コピーでは `<TO_BE_CONFIRMED>` などのプレースホルダーを置き換えてください。顧客名、内部アカウントID、実メールアドレス、認証情報、本番キャンペーンIDをサンプルへ追加しないでください。
 
-The sample intentionally uses generic names such as `cart_abandonment`, `source_web_events`, and `target_cart_send_list`. Replace every `<TO_BE_CONFIRMED>` value in the customer copy. Do not add customer names, internal account IDs, real addresses, credentials, or production campaign IDs to this sample.
-
-## Safety
-
-Run validation and a dry-run first. A dry-run is not a send. Obtain explicit confirmation before running a test or production workflow that invokes an external connector or Engage Studio campaign.
+検証とdry-runを先に実施してください。dry-runは送信ではありませんが、テストWorkflowや外部コネクタを実行する前にも対象範囲と送信先について明示的な承認を得てください。
