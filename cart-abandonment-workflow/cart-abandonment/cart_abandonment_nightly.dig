@@ -1,0 +1,377 @@
+################################################################################
+# cart_abandonment_nightly.dig（夜間バッチ版）
+#
+# カート放棄検出WF（毎日 07:45 実行）
+# 前日20時〜当日7時25分の夜間カート放棄を処理する
+#
+# 2026-07-18 改修（案A: リアルタイム化）:
+#   - ソースを source_web_events に変更
+#     （従来の l1_web.agg_weblog は当日0時〜8時のデータが存在せず、
+#       夜間窓のうち前日20時〜24時分しか実際には処理できていなかった）
+#   - 購買完了判定を Web Pixel thank-you PV に変更
+#   - 購買除外レイヤ2: 直近48h注文者（source_customer.orders）をemail単位で除外
+#   - 重複排除を追加: 同種24hローリング1通・全体当日2通
+#   - クーポン期限を params 化 + 期限超過ガード
+#   - store記録のテンプレートIDを実配信（normal統一）に整合
+#
+# スケジュール設定根拠（毎日 07:45 JST）:
+#   - 処理時間: 約3〜4分 → 07:49 頃完了
+#   - <OPTIONAL_UPSTREAM_WORKFLOW> が 08:00 に起動し即 PSキック → 11分の余裕
+#   - create_customer_site_recommend_data（06:00開始・最悪06:57完了）の完了後
+################################################################################
+schedule:
+  cron>: "45 7 * * *"
+
+timezone: Asia/Tokyo
+
+_export:
+  td:
+    database: cart_abandonment_db
+    engine: presto
+  session_span: 1800
+  min_ago: 20
+
+  media:
+    customer_site:
+      media_name: customer_site
+      all_columns:
+        columns:
+          - td_item_id
+          - td_item_name
+          - td_item_category
+          - td_item_price
+          - td_item_ord
+          - td_email
+          - ecommerce
+
+  exclude_hashed_emails: []
+
+  # クーポン設定（リアルタイム版と同一値で管理すること）
+  coupon:
+    expiry_date: "2026-08-31"
+    expiry_label: "2026年8月31日(月) 23:59まで"
+
+  engage:
+    connection: "<ENGAGE_CONNECTION>"
+    workspace_id: "<ENGAGE_WORKSPACE_ID>"
+    cart_campaign_id: "<ALWAYS_ON_CAMPAIGN_ID>"
+
++create_todays_access_data:
+  for_each>:
+    param: ${Object.keys(media)}
+  _do:
+    +empty_tmp_tables:
+      td_ddl>:
+      empty_tables:
+        - cart_abandonment_db.cart_abandonment_tmp_cart_drop_weblog
+
+    +tmp:
+      _export:
+        time_filter: >-
+          TD_TIME_RANGE(time,
+          '${moment(session_time).add(-1, 'days').format("YYYY-MM-DD")} 20:00:00',
+          '${moment(session_time).format("YYYY-MM-DD")} 08:00:00',
+          'JST')
+      +pv:
+        td>: queries/agg_web/tmp.sql
+        insert_into: cart_abandonment_db.cart_abandonment_tmp_cart_drop_weblog
+        _retry: 2
+
+    +main:
+      +dist:
+        td>: queries/agg_web/main.sql
+        create_table: cart_abandonment_db.cart_abandonment_cart_drop_weblog
+        _retry: 2
+
+    +drop_tmp:
+      td_ddl>:
+      drop_tables:
+        - cart_abandonment_db.cart_abandonment_tmp_cart_drop_weblog
+
++main:
+  # 中間テーブルは create_table（毎回DROP & CREATE）方式で作成
+
+  +ensure_store_table_v2:
+    td>:
+    query: >-
+      CREATE TABLE IF NOT EXISTS cart_abandonment_db.cart_abandonment_store_cart_drop_sent_list_v2 (
+        email varchar, send_type varchar, workflow_name varchar, rfm_segment varchar,
+        template_event_id varchar, template_id varchar,
+        pointsapproved varchar,
+        has_low_stock varchar,
+        coupon_code varchar, coupon_image_url varchar, coupon_description varchar, coupon_expiry varchar,
+        cart_abandon_item_id varchar, cart_abandon_item_name varchar,
+        cart_abandon_image_url varchar, cart_abandon_item_url varchar, cart_abandon_brand varchar,
+        cart_item_seq1_image_url varchar, cart_item_seq1_item_name varchar,
+        cart_item_seq1_item_url varchar, cart_item_seq1_item_brand varchar,
+        cart_item_seq1_low_stock varchar, cart_item_seq1_price varchar,
+        cart_item_seq1_price_org varchar, cart_item_seq1_sale_flag varchar, cart_item_seq1_discount_rate varchar,
+        cart_item_seq2_image_url varchar, cart_item_seq2_item_name varchar,
+        cart_item_seq2_item_url varchar, cart_item_seq2_item_brand varchar,
+        cart_item_seq2_low_stock varchar, cart_item_seq2_price varchar,
+        cart_item_seq2_price_org varchar, cart_item_seq2_sale_flag varchar, cart_item_seq2_discount_rate varchar,
+        cart_item_seq3_image_url varchar, cart_item_seq3_item_name varchar,
+        cart_item_seq3_item_url varchar, cart_item_seq3_item_brand varchar,
+        cart_item_seq3_low_stock varchar, cart_item_seq3_price varchar,
+        cart_item_seq3_price_org varchar, cart_item_seq3_sale_flag varchar, cart_item_seq3_discount_rate varchar,
+        cart_item_seq4_image_url varchar, cart_item_seq4_item_name varchar,
+        cart_item_seq4_item_url varchar, cart_item_seq4_item_brand varchar,
+        cart_item_seq4_low_stock varchar, cart_item_seq4_price varchar,
+        cart_item_seq4_price_org varchar, cart_item_seq4_sale_flag varchar, cart_item_seq4_discount_rate varchar,
+        cart_abandon_recommend_seq1_image_url varchar, cart_abandon_recommend_seq1_item_name varchar,
+        cart_abandon_recommend_seq1_item_url varchar, cart_abandon_recommend_seq1_item_brand varchar,
+        recommend_seq1_price varchar, recommend_seq1_price_org varchar,
+        recommend_seq1_sale_flag varchar, recommend_seq1_discount_rate varchar,
+        cart_abandon_recommend_seq2_image_url varchar, cart_abandon_recommend_seq2_item_name varchar,
+        cart_abandon_recommend_seq2_item_url varchar, cart_abandon_recommend_seq2_item_brand varchar,
+        recommend_seq2_price varchar, recommend_seq2_price_org varchar,
+        recommend_seq2_sale_flag varchar, recommend_seq2_discount_rate varchar,
+        cart_abandon_recommend_seq3_image_url varchar, cart_abandon_recommend_seq3_item_name varchar,
+        cart_abandon_recommend_seq3_item_url varchar, cart_abandon_recommend_seq3_item_brand varchar,
+        recommend_seq3_price varchar, recommend_seq3_price_org varchar,
+        recommend_seq3_sale_flag varchar, recommend_seq3_discount_rate varchar,
+        cart_abandon_recommend_seq4_image_url varchar, cart_abandon_recommend_seq4_item_name varchar,
+        cart_abandon_recommend_seq4_item_url varchar, cart_abandon_recommend_seq4_item_brand varchar,
+        recommend_seq4_price varchar, recommend_seq4_price_org varchar,
+        recommend_seq4_sale_flag varchar, recommend_seq4_discount_rate varchar,
+        cart_abandon_detected_at varchar, scheduled_time varchar
+      )
+
+  # 購買除外レイヤ2: 直近48h注文者のハッシュemail
+  +recent_purchasers:
+    td>: queries/main/recent_purchasers.sql
+    create_table: cart_abandonment_db.cart_abandonment_recent_purchasers
+    _retry: 2
+
+  +purchase_session:
+    td>: queries/main/purchase_session.sql
+    create_table: cart_abandonment_db.cart_abandonment_purchase_session
+    _retry: 2
+
+  +last_session:
+    td>: queries/main/last_session.sql
+    create_table: cart_abandonment_db.cart_abandonment_last_session
+    _retry: 2
+
+  +candidate_session:
+    td>: queries/main/candidate_session.sql
+    create_table: cart_abandonment_db.cart_abandonment_candidate_session
+    _retry: 2
+
+  +last_in_cart:
+    td>: queries/main/last_in_cart.sql
+    create_table: cart_abandonment_db.cart_abandonment_last_in_cart
+    _retry: 2
+
+  +tmp_target_session:
+    td>: queries/main/tmp_target_session.sql
+    create_table: cart_abandonment_db.cart_abandonment_tmp_target_session
+    _retry: 2
+
+  +candidate_send_list:
+    td>: queries/main/candidate_send_list.sql
+    create_table: cart_abandonment_db.cart_abandonment_candidate_send_list
+    _retry: 2
+
+  +push_send_list:
+    # push_send_list テーブルの存在保証（PSから常に参照されるため消えてはいけない）
+    +ensure_push_send_list:
+      td>:
+      query: >-
+        CREATE TABLE IF NOT EXISTS cart_abandonment_db.cart_abandonment_push_send_list (
+          email varchar, cart_abandon_rfm_segment varchar,
+          cart_abandon_item_id varchar, cart_abandon_item_name varchar,
+          cart_abandon_item_category varchar, cart_abandon_image_url varchar,
+          cart_abandon_item_url varchar, cart_abandon_brand varchar,
+          cart_item_seq1_image_url varchar, cart_item_seq1_item_name varchar,
+          cart_item_seq1_item_url varchar, cart_item_seq1_item_brand varchar,
+          cart_item_seq2_image_url varchar, cart_item_seq2_item_name varchar,
+          cart_item_seq2_item_url varchar, cart_item_seq2_item_brand varchar,
+          cart_item_seq3_image_url varchar, cart_item_seq3_item_name varchar,
+          cart_item_seq3_item_url varchar, cart_item_seq3_item_brand varchar,
+          cart_item_seq4_image_url varchar, cart_item_seq4_item_name varchar,
+          cart_item_seq4_item_url varchar, cart_item_seq4_item_brand varchar,
+          cart_abandon_recommend_seq1_image_url varchar, cart_abandon_recommend_seq1_item_name varchar,
+          cart_abandon_recommend_seq1_item_url varchar, cart_abandon_recommend_seq1_item_brand varchar,
+          cart_abandon_recommend_seq2_image_url varchar, cart_abandon_recommend_seq2_item_name varchar,
+          cart_abandon_recommend_seq2_item_url varchar, cart_abandon_recommend_seq2_item_brand varchar,
+          cart_abandon_recommend_seq3_image_url varchar, cart_abandon_recommend_seq3_item_name varchar,
+          cart_abandon_recommend_seq3_item_url varchar, cart_abandon_recommend_seq3_item_brand varchar,
+          cart_abandon_recommend_seq4_image_url varchar, cart_abandon_recommend_seq4_item_name varchar,
+          cart_abandon_recommend_seq4_item_url varchar, cart_abandon_recommend_seq4_item_brand varchar,
+          cart_abandon_detected_at varchar
+        )
+
+    # 既存データを全削除（テーブル自体は残る）
+    +delete_push_send_list:
+      td>:
+      query: DELETE FROM cart_abandonment_db.cart_abandonment_push_send_list WHERE 1=1
+
+    # 新しいデータを挿入
+    +create_push_send_list:
+      td>: queries/main/create_push_send_list_8oclock.sql
+      insert_into: cart_abandonment_db.cart_abandonment_push_send_list
+      _retry: 2
+
+    # ==================================================================
+    # 【メール配信ステップ】
+    #
+    # ✅ 2026-07-18 配信有効化済み
+    # ==================================================================
+    +send:
+      call>: send_email.dig
+
+    # 送信履歴を永続保存（重複排除 + 分析・効果測定を兼ねる）
+    +store_cart_drop_sent_list:
+      td>:
+      query: >-
+        WITH coupon_state AS (
+          SELECT
+            CAST('${coupon.expiry_date}' AS DATE)
+              >= CAST(TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd', 'JST') AS DATE) AS active
+        )
+        SELECT
+          p.email,
+          'cart_abandon' AS send_type,
+          'cart_abandonment_nightly' AS workflow_name,
+          p.cart_abandon_rfm_segment AS rfm_segment,
+          'cart_abandonment_email' AS template_event_id,
+          '<TEMPLATE_ID>' AS template_id,
+          COALESCE(CAST(c.pointsapproved AS VARCHAR), '0') AS pointsapproved,
+          CASE
+            WHEN COALESCE(sk1.low_stock, '') = '1'
+              OR COALESCE(sk2.low_stock, '') = '1'
+              OR COALESCE(sk3.low_stock, '') = '1'
+              OR COALESCE(sk4.low_stock, '') = '1'
+            THEN '1' ELSE ''
+          END AS has_low_stock,
+          CASE WHEN cs.active THEN
+            CASE p.cart_abandon_rfm_segment
+              WHEN 'unknown' THEN '<COUPON_CODE_UNKNOWN>'
+              WHEN 'f0'      THEN '<COUPON_CODE_F0>'
+              WHEN 'f1'      THEN '<COUPON_CODE_F1>'
+              WHEN 'f3plus'  THEN '<COUPON_CODE_F3PLUS>'
+              ELSE ''
+            END
+          ELSE '' END AS coupon_code,
+          CASE WHEN cs.active THEN
+            CASE p.cart_abandon_rfm_segment
+              WHEN 'f0' THEN '<COUPON_IMAGE_URL_F0>'
+              ELSE           '<COUPON_IMAGE_URL_DEFAULT>'
+            END
+          ELSE '' END AS coupon_image_url,
+          CASE WHEN cs.active THEN
+            CASE p.cart_abandon_rfm_segment
+              WHEN 'unknown' THEN 'オンライン限定 5,500円(税込)以上で使える500円クーポン'
+              WHEN 'f0'      THEN 'オンライン限定 11,000円(税込)以上で使える1,000円クーポン'
+              WHEN 'f1'      THEN 'オンライン限定 5,500円(税込)以上で使える500円クーポン'
+              WHEN 'f3plus'  THEN 'オンライン限定 5,500円(税込)以上で使える500円クーポン'
+              ELSE ''
+            END
+          ELSE '' END AS coupon_description,
+          CASE WHEN cs.active THEN '${coupon.expiry_label}' ELSE '' END AS coupon_expiry,
+          p.cart_abandon_item_id,
+          p.cart_abandon_item_name,
+          p.cart_abandon_image_url,
+          p.cart_abandon_item_url,
+          p.cart_abandon_brand,
+          p.cart_item_seq1_image_url,
+          p.cart_item_seq1_item_name,
+          p.cart_item_seq1_item_url,
+          p.cart_item_seq1_item_brand,
+          CASE WHEN COALESCE(sk1.is_available, '') = '1' THEN COALESCE(sk1.low_stock, '') ELSE '' END AS cart_item_seq1_low_stock,
+          CASE WHEN COALESCE(sk1.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(sk1.taxin_price AS BIGINT)), '') ELSE '' END AS cart_item_seq1_price,
+          CASE WHEN COALESCE(sk1.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(sk1.taxin_compare_at_price AS BIGINT)), '') ELSE '' END AS cart_item_seq1_price_org,
+          CASE WHEN COALESCE(sk1.is_available, '') = '1' AND sk1.sale_flag = '1' THEN '1' ELSE '' END AS cart_item_seq1_sale_flag,
+          CASE WHEN COALESCE(sk1.is_available, '') = '1' AND sk1.sale_flag = '1' THEN COALESCE(sk1.discount_rate, '') ELSE '' END AS cart_item_seq1_discount_rate,
+          p.cart_item_seq2_image_url,
+          p.cart_item_seq2_item_name,
+          p.cart_item_seq2_item_url,
+          p.cart_item_seq2_item_brand,
+          CASE WHEN COALESCE(sk2.is_available, '') = '1' THEN COALESCE(sk2.low_stock, '') ELSE '' END AS cart_item_seq2_low_stock,
+          CASE WHEN COALESCE(sk2.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(sk2.taxin_price AS BIGINT)), '') ELSE '' END AS cart_item_seq2_price,
+          CASE WHEN COALESCE(sk2.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(sk2.taxin_compare_at_price AS BIGINT)), '') ELSE '' END AS cart_item_seq2_price_org,
+          CASE WHEN COALESCE(sk2.is_available, '') = '1' AND sk2.sale_flag = '1' THEN '1' ELSE '' END AS cart_item_seq2_sale_flag,
+          CASE WHEN COALESCE(sk2.is_available, '') = '1' AND sk2.sale_flag = '1' THEN COALESCE(sk2.discount_rate, '') ELSE '' END AS cart_item_seq2_discount_rate,
+          p.cart_item_seq3_image_url,
+          p.cart_item_seq3_item_name,
+          p.cart_item_seq3_item_url,
+          p.cart_item_seq3_item_brand,
+          CASE WHEN COALESCE(sk3.is_available, '') = '1' THEN COALESCE(sk3.low_stock, '') ELSE '' END AS cart_item_seq3_low_stock,
+          CASE WHEN COALESCE(sk3.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(sk3.taxin_price AS BIGINT)), '') ELSE '' END AS cart_item_seq3_price,
+          CASE WHEN COALESCE(sk3.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(sk3.taxin_compare_at_price AS BIGINT)), '') ELSE '' END AS cart_item_seq3_price_org,
+          CASE WHEN COALESCE(sk3.is_available, '') = '1' AND sk3.sale_flag = '1' THEN '1' ELSE '' END AS cart_item_seq3_sale_flag,
+          CASE WHEN COALESCE(sk3.is_available, '') = '1' AND sk3.sale_flag = '1' THEN COALESCE(sk3.discount_rate, '') ELSE '' END AS cart_item_seq3_discount_rate,
+          p.cart_item_seq4_image_url,
+          p.cart_item_seq4_item_name,
+          p.cart_item_seq4_item_url,
+          p.cart_item_seq4_item_brand,
+          CASE WHEN COALESCE(sk4.is_available, '') = '1' THEN COALESCE(sk4.low_stock, '') ELSE '' END AS cart_item_seq4_low_stock,
+          CASE WHEN COALESCE(sk4.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(sk4.taxin_price AS BIGINT)), '') ELSE '' END AS cart_item_seq4_price,
+          CASE WHEN COALESCE(sk4.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(sk4.taxin_compare_at_price AS BIGINT)), '') ELSE '' END AS cart_item_seq4_price_org,
+          CASE WHEN COALESCE(sk4.is_available, '') = '1' AND sk4.sale_flag = '1' THEN '1' ELSE '' END AS cart_item_seq4_sale_flag,
+          CASE WHEN COALESCE(sk4.is_available, '') = '1' AND sk4.sale_flag = '1' THEN COALESCE(sk4.discount_rate, '') ELSE '' END AS cart_item_seq4_discount_rate,
+          p.cart_abandon_recommend_seq1_image_url,
+          p.cart_abandon_recommend_seq1_item_name,
+          p.cart_abandon_recommend_seq1_item_url,
+          p.cart_abandon_recommend_seq1_item_brand,
+          CASE WHEN COALESCE(rsk1.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(rsk1.taxin_price AS BIGINT)), '') ELSE '' END AS recommend_seq1_price,
+          CASE WHEN COALESCE(rsk1.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(rsk1.taxin_compare_at_price AS BIGINT)), '') ELSE '' END AS recommend_seq1_price_org,
+          CASE WHEN COALESCE(rsk1.is_available, '') = '1' AND rsk1.sale_flag = '1' THEN '1' ELSE '' END AS recommend_seq1_sale_flag,
+          CASE WHEN COALESCE(rsk1.is_available, '') = '1' AND rsk1.sale_flag = '1' THEN COALESCE(rsk1.discount_rate, '') ELSE '' END AS recommend_seq1_discount_rate,
+          p.cart_abandon_recommend_seq2_image_url,
+          p.cart_abandon_recommend_seq2_item_name,
+          p.cart_abandon_recommend_seq2_item_url,
+          p.cart_abandon_recommend_seq2_item_brand,
+          CASE WHEN COALESCE(rsk2.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(rsk2.taxin_price AS BIGINT)), '') ELSE '' END AS recommend_seq2_price,
+          CASE WHEN COALESCE(rsk2.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(rsk2.taxin_compare_at_price AS BIGINT)), '') ELSE '' END AS recommend_seq2_price_org,
+          CASE WHEN COALESCE(rsk2.is_available, '') = '1' AND rsk2.sale_flag = '1' THEN '1' ELSE '' END AS recommend_seq2_sale_flag,
+          CASE WHEN COALESCE(rsk2.is_available, '') = '1' AND rsk2.sale_flag = '1' THEN COALESCE(rsk2.discount_rate, '') ELSE '' END AS recommend_seq2_discount_rate,
+          p.cart_abandon_recommend_seq3_image_url,
+          p.cart_abandon_recommend_seq3_item_name,
+          p.cart_abandon_recommend_seq3_item_url,
+          p.cart_abandon_recommend_seq3_item_brand,
+          CASE WHEN COALESCE(rsk3.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(rsk3.taxin_price AS BIGINT)), '') ELSE '' END AS recommend_seq3_price,
+          CASE WHEN COALESCE(rsk3.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(rsk3.taxin_compare_at_price AS BIGINT)), '') ELSE '' END AS recommend_seq3_price_org,
+          CASE WHEN COALESCE(rsk3.is_available, '') = '1' AND rsk3.sale_flag = '1' THEN '1' ELSE '' END AS recommend_seq3_sale_flag,
+          CASE WHEN COALESCE(rsk3.is_available, '') = '1' AND rsk3.sale_flag = '1' THEN COALESCE(rsk3.discount_rate, '') ELSE '' END AS recommend_seq3_discount_rate,
+          p.cart_abandon_recommend_seq4_image_url,
+          p.cart_abandon_recommend_seq4_item_name,
+          p.cart_abandon_recommend_seq4_item_url,
+          p.cart_abandon_recommend_seq4_item_brand,
+          CASE WHEN COALESCE(rsk4.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(rsk4.taxin_price AS BIGINT)), '') ELSE '' END AS recommend_seq4_price,
+          CASE WHEN COALESCE(rsk4.is_available, '') = '1' THEN COALESCE(FORMAT('%,d', TRY_CAST(rsk4.taxin_compare_at_price AS BIGINT)), '') ELSE '' END AS recommend_seq4_price_org,
+          CASE WHEN COALESCE(rsk4.is_available, '') = '1' AND rsk4.sale_flag = '1' THEN '1' ELSE '' END AS recommend_seq4_sale_flag,
+          CASE WHEN COALESCE(rsk4.is_available, '') = '1' AND rsk4.sale_flag = '1' THEN COALESCE(rsk4.discount_rate, '') ELSE '' END AS recommend_seq4_discount_rate,
+          p.cart_abandon_detected_at,
+          TD_TIME_FORMAT(TD_SCHEDULED_TIME(), 'yyyy-MM-dd HH:mm:ss', 'JST') AS scheduled_time
+        FROM cart_abandonment_db.cart_abandonment_push_send_list p
+        CROSS JOIN coupon_state cs
+        LEFT JOIN (
+          SELECT email, MAX(pointsapproved) AS pointsapproved
+          FROM customer_attributes_db.customer_attributes
+          GROUP BY email
+        ) c
+          ON p.email = c.email
+        LEFT JOIN cart_abandonment_db.reco_product_stock sk1
+          ON REGEXP_EXTRACT(p.cart_item_seq1_item_url, '/products/([^/?]+)', 1) = sk1.item_id
+        LEFT JOIN cart_abandonment_db.reco_product_stock sk2
+          ON REGEXP_EXTRACT(p.cart_item_seq2_item_url, '/products/([^/?]+)', 1) = sk2.item_id
+        LEFT JOIN cart_abandonment_db.reco_product_stock sk3
+          ON REGEXP_EXTRACT(p.cart_item_seq3_item_url, '/products/([^/?]+)', 1) = sk3.item_id
+        LEFT JOIN cart_abandonment_db.reco_product_stock sk4
+          ON REGEXP_EXTRACT(p.cart_item_seq4_item_url, '/products/([^/?]+)', 1) = sk4.item_id
+        LEFT JOIN cart_abandonment_db.reco_product_stock rsk1
+          ON REGEXP_EXTRACT(p.cart_abandon_recommend_seq1_item_url, '/products/([^/?]+)', 1) = rsk1.item_id
+        LEFT JOIN cart_abandonment_db.reco_product_stock rsk2
+          ON REGEXP_EXTRACT(p.cart_abandon_recommend_seq2_item_url, '/products/([^/?]+)', 1) = rsk2.item_id
+        LEFT JOIN cart_abandonment_db.reco_product_stock rsk3
+          ON REGEXP_EXTRACT(p.cart_abandon_recommend_seq3_item_url, '/products/([^/?]+)', 1) = rsk3.item_id
+        LEFT JOIN cart_abandonment_db.reco_product_stock rsk4
+          ON REGEXP_EXTRACT(p.cart_abandon_recommend_seq4_item_url, '/products/([^/?]+)', 1) = rsk4.item_id
+        WHERE p.email IS NOT NULL
+      insert_into: cart_abandonment_db.cart_abandonment_store_cart_drop_sent_list_v2
+      _retry: 2
+
+    +log_done:
+      echo>: "カート放棄WF完了（8時バッチ・配信済み）"
