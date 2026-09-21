@@ -91,7 +91,7 @@ tdx を直接実行するため、参照も書き込みも同じように通り�
 
 | コマンド | 理由 |
 |---|---|
-| `auth` / `profile` / `profiles` | 認証情報を壊す |
+| `auth login` / `auth logout` / `profile` / `profiles` | 認証情報を壊す。`auth status` は参照のみなので実行します |
 | `mcp` | MCP サーバーの入れ子起動 |
 | `upgrade` | バージョンが変わり再現性が落ちる |
 | `claude` / `codex` | 対話型エージェントの起動。返らなくなる |
