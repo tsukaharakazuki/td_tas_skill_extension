@@ -45,22 +45,38 @@ Team / Enterprise では管理者設定。個人アカウントでは設定画�
 
 ## インストール
 
-### `npm error code: 'EACCES'`
+### `tdx: command not found`
 
-npm prefix が `/usr` を指しており、書き込み権限がない。
+`<WORKDIR>/runtime/bin` が PATH に入っていない。`device_bash` は毎回新しいシェルなので、コマンドごとに次を付ける。
 
 ```bash
-npm config set prefix "$HOME/.npm-global"
-export PATH="$HOME/.npm-global/bin:$PATH"
+export PATH="<WORKDIR>/runtime/bin:$PATH"
 ```
 
-### `tdx: command not found`（インストール直後）
+runtime は接続フォルダの中にあるので消えていない。まず PATH を疑う。
 
-`$HOME/.npm-global/bin` が PATH に入っていない。`device_bash` は毎回新しいシェルなので、コマンドごとに `export PATH=...` を付ける。
+### `npm error code: 'EACCES'`
 
-### セッションを開き直したら tdx が消えた
+`--prefix` を付け忘れて `/usr` に入れようとしている。作業フォルダを指定する。
 
-Cowork VM のホームディレクトリは使い捨て。毎セッション再インストールが必要で、これは正常な挙動。障害として報告せず、黙ってセットアップし直す。接続フォルダの中にある `tdx_key.txt` は残っている。
+```bash
+npm i -g --prefix "<WORKDIR>/runtime" @treasuredata/tdx
+```
+
+### runtime が見つからない
+
+作業フォルダを含むフォルダが接続されていない可能性がある。接続フォルダ一覧を確認する。
+
+```bash
+ls "$HOME/mnt/"
+find "$HOME/mnt" -maxdepth 5 -path '*/runtime/bin/tdx' 2>/dev/null
+```
+
+作業フォルダごと移動・改名された場合は、キーファイルの場所から辿り直す。
+
+### 別のマシンで使えない
+
+`runtime/` は導入したマシンの Node 環境に依存する。同期フォルダ経由で別マシンに持っていった場合は、そのマシンで入れ直す。
 
 ## 実行
 
@@ -82,4 +98,10 @@ Finder は `.` で始まるファイルを表示しない。`tdx_key.txt` のよ
 
 ### キーをリポジトリに置く場合
 
-`.gitignore` に `tdx_key.txt` を追加し、`git check-ignore -v tdx_key.txt` で除外を確認してからコミットする。公開リポジトリなら特に確認を省かない。
+`.gitignore` に `tdx_key.txt` と `runtime/` を追加し、`git check-ignore -v tdx_key.txt` で除外を確認してからコミットする。公開リポジトリなら特に確認を省かない。
+
+### 作業フォルダをどこに作るか
+
+既定は `TreasureAI`。Claude Cowork 用のフォルダを既に接続しているなら、その中にサブフォルダとして作る。既存フォルダの直下にキーファイルや `runtime/` を置かない。
+
+iCloud や Dropbox の同期対象は避ける。`runtime/` は約 60MB あり、同期の無駄になる。
