@@ -5,13 +5,13 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.7.0",
-    "description": "Treasure Data skill extensions — connection setup, tdx CLI, Excel, Engage, workflow, recommendation, datafeed, and cart-abandonment automation"
+    "version": "1.8.0",
+    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, and cart-abandonment automation"
   },
   "plugins": [
     {
       "name": "td-claude2tdx-connect",
-      "description": "Use when the user wants Claude to operate Treasure Data through the tdx CLI — running workflows, managing CDP segments and journeys, Engage campaigns, jobs, or any write operation — or when they need help installing, configuring, or troubleshooting the tdx desktop extension (.mcpb). Triggers on phrases like 'tdxをClaudeから使いたい', 'tdxの設定', 'Claudeからワークフローを実行したい', 'セグメントをClaudeで操作したい', 'TDに書き込みたい', '権限モードを変えたい', 'set up tdx for Claude'.",
+      "description": "Use when the user wants to query or operate Treasure Data from Claude — running SQL, listing databases and tables, checking schemas, CDP segments, journeys, Engage, workflows, jobs, or schedules — and immediately after this plugin is installed, to set up the connection. Installs the tdx CLI into the session and authenticates with a key file on the user's computer. Triggers on phrases like 'TDに繋ぎたい', 'TDのDBを教えて', 'TDでクエリして', 'テーブルの中身見せて', 'セグメントを確認して', 'ワークフロー流して', 'TDのセットアップして', 'query Treasure Data', 'connect Claude to Treasure Data'.",
       "source": "./",
       "strict": false,
       "skills": [

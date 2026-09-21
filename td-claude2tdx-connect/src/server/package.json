@@ -1,6 +1,0 @@
-{
-  "name": "td-claude2tdx-connect-server",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": { "@treasuredata/tdx": "2026.9.0" }
-}
