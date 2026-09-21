@@ -1,0 +1,7 @@
+*.map
+**/*.map
+**/test/**
+**/tests/**
+**/__tests__/**
+**/*.md
+!../README.md

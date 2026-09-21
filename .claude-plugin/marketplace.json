@@ -5,10 +5,19 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.5.0",
-    "description": "Treasure Data skill extensions — Excel, Engage, workflow, recommendation, datafeed, and cart-abandonment automation"
+    "version": "1.6.0",
+    "description": "Treasure Data skill extensions — connection setup, Excel, Engage, workflow, recommendation, datafeed, and cart-abandonment automation"
   },
   "plugins": [
+    {
+      "name": "td-claude2td-connect",
+      "description": "Use when the user wants to connect Claude to Treasure Data so that they can run SQL and inspect schemas from a conversation, or when they need help installing, configuring, or troubleshooting the read-only Treasure Data desktop extension (.mcpb). Triggers on phrases like 'ClaudeからTDに接続したい', 'TreasureDataに繋ぎたい', 'TDのSQLをClaudeから実行したい', 'TD接続の設定', 'APIキーの設定', 'TD拡張機能が動かない', 'connect Claude to Treasure Data'.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./td-claude2td-connect"
+      ]
+    },
     {
       "name": "excel-to-td-upload",
       "description": "Use when the user wants to upload an Excel file (.xlsx) with multiple sheets to Treasure Data (TD). Handles multi-sheet files, Japanese column name translation, and TD naming conventions.",
