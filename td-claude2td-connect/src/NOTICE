@@ -1,0 +1,12 @@
+td-claude2td-connect
+Copyright 2026 Kazuki Tsukahara
+
+This product bundles the official Treasure Data MCP Server
+(@treasuredata/mcp-server), Copyright Treasure Data, Inc.,
+licensed under the Apache License, Version 2.0.
+
+  https://github.com/treasure-data/td-mcp-server
+
+The bundled server is redistributed unmodified. A launcher
+(server/index.js) sets it to read-only mode and tightens its SQL
+validation before starting it.

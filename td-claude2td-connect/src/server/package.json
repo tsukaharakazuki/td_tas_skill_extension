@@ -1,0 +1,6 @@
+{
+  "name": "td-claude2td-connect-server",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": { "@treasuredata/mcp-server": "0.4.5" }
+}

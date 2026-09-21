@@ -1,0 +1,81 @@
+{
+  "manifest_version": "0.3",
+  "name": "td-claude2td-connect",
+  "display_name": "Treasure Data (read-only)",
+  "version": "0.1.0",
+  "description": "Treasure Data に読み取り専用で接続し、データベース一覧・スキーマ確認・SQL クエリを実行します。",
+  "long_description": "Treasure Data の公式 MCP サーバー (@treasuredata/mcp-server) を、読み取り専用に固定した状態で同梱した拡張機能です。API キーはこの PC の OS キーチェーンに保存され、Treasure Data への通信もこの PC から直接行われます。書き込み系の操作 (INSERT / UPDATE / DELETE / CREATE / DROP / ALTER) は設定で有効化できないようロックされています。",
+  "author": {
+    "name": "Kazuki Tsukahara",
+    "url": "https://github.com/tsukaharakazuki"
+  },
+  "homepage": "https://github.com/tsukaharakazuki/td_tas_skill_extension",
+  "documentation": "https://github.com/tsukaharakazuki/td_tas_skill_extension/tree/main/td-claude2td-connect",
+  "support": "https://github.com/tsukaharakazuki/td_tas_skill_extension/issues",
+  "license": "Apache-2.0",
+  "keywords": ["treasure-data", "sql", "trino", "cdp", "analytics", "read-only"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {
+        "TD_API_KEY": "${user_config.td_api_key}",
+        "TD_SITE": "${user_config.td_site}",
+        "TD_DATABASE": "${user_config.td_database}",
+        "TD_ENABLE_UPDATES": "false"
+      }
+    }
+  },
+  "user_config": {
+    "td_api_key": {
+      "type": "string",
+      "title": "Treasure Data API キー",
+      "description": "読み取り専用ユーザーの Master Key を貼り付けてください。Write-only Key ではクエリを実行できません。入力した値はこの PC の OS キーチェーンに保存されます。",
+      "sensitive": true,
+      "required": true
+    },
+    "td_site": {
+      "type": "string",
+      "title": "リージョン",
+      "description": "TD コンソールの URL に含まれるリージョン ID。us01 / jp01 / eu01 / ap02 / ap03 のいずれか。",
+      "default": "jp01",
+      "required": true
+    },
+    "td_database": {
+      "type": "string",
+      "title": "既定のデータベース (任意)",
+      "description": "よく使うデータベース名。空欄のままでも、会話の中でデータベースを切り替えられます。",
+      "required": false
+    }
+  },
+  "tools": [
+    { "name": "list_databases", "description": "アクセスできるデータベースの一覧を取得します" },
+    { "name": "list_tables", "description": "データベース内のテーブル一覧を取得します" },
+    { "name": "describe_table", "description": "テーブルのカラム定義を取得します" },
+    { "name": "query", "description": "読み取り専用の SQL (SELECT / WITH / SHOW / DESCRIBE) を実行します" },
+    { "name": "use_database", "description": "操作対象のデータベースを切り替えます" },
+    { "name": "current_database", "description": "現在の操作対象データベースを返します" },
+    { "name": "list_parent_segments", "description": "CDP の親セグメント一覧を取得します" },
+    { "name": "get_parent_segment", "description": "親セグメントの詳細を取得します" },
+    { "name": "list_segments", "description": "セグメント一覧を取得します" },
+    { "name": "get_segment", "description": "セグメントの詳細を取得します" },
+    { "name": "list_activations", "description": "アクティベーション一覧を取得します" },
+    { "name": "parent_segment_sql", "description": "親セグメントの SQL 定義を取得します" },
+    { "name": "segment_sql", "description": "セグメントの SQL 定義を取得します" },
+    { "name": "list_projects", "description": "Workflow プロジェクト一覧を取得します" },
+    { "name": "list_workflows", "description": "ワークフロー一覧を取得します" },
+    { "name": "list_sessions", "description": "ワークフローのセッション一覧を取得します" },
+    { "name": "get_session_attempts", "description": "セッションの実行履歴を取得します" },
+    { "name": "get_attempt_tasks", "description": "実行内のタスク一覧を取得します" },
+    { "name": "get_task_logs", "description": "タスクの実行ログを取得します" }
+  ],
+  "tools_generated": true,
+  "compatibility": {
+    "platforms": ["darwin", "win32"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}
