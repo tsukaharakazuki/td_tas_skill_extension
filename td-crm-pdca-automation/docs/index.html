@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Treasure AI | CRM PDCA Skill Guide</title>
+  <meta name="description" content="CRM施策のPlan→Do→Check→Actionを、4つのAIペルソナと人の意思決定で回すTreasure AI Studio向けSkillの活用ガイド。">
+  <style>
+    :root {
+      --navy: #11183f;
+      --ink: #171a38;
+      --muted: #667085;
+      --line: #e4e7ec;
+      --paper: #ffffff;
+      --soft: #f7f8fc;
+      --lavender: #ecebff;
+      --purple: #635bff;
+      --orange: #ff805d;
+      --mint: #d9f7ee;
+      --green: #23b99a;
+      --yellow: #fff2c7;
+      --shadow: 0 18px 50px rgba(17, 24, 63, .09);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--ink); background: var(--soft); font-family: Inter, "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.75; }
+    a { color: inherit; text-decoration: none; }
+    .topbar { position: sticky; top: 0; z-index: 20; background: rgba(17,24,63,.97); color: #fff; border-bottom: 1px solid rgba(255,255,255,.13); }
+    .topbar-inner { max-width: 1240px; margin: auto; height: 72px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; }
+    .brand { display:flex; align-items:center; gap: 15px; font-weight: 700; letter-spacing: .02em; }
+    .brand img { width: 148px; height: auto; display:block; }
+    .brand-label { border-left: 1px solid rgba(255,255,255,.35); padding-left: 15px; color: #d9dcf3; font-size: 13px; }
+    .nav { display:flex; gap: 20px; align-items:center; font-size: 13px; color: #d9dcf3; }
+    .nav a:hover { color:#fff; }
+    .hero { background: radial-gradient(circle at 80% 10%, rgba(99,91,255,.45), transparent 35%), linear-gradient(125deg, var(--navy), #202a68 65%, #5147b6); color:#fff; }
+    .hero-inner { max-width:1240px; margin:auto; padding: 92px 28px 88px; display:grid; grid-template-columns: 1.25fr .75fr; gap: 50px; align-items:center; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.16em; font-size:12px; font-weight:800; color:#bfc6ff; }
+    h1 { font-size: clamp(36px, 5vw, 66px); line-height:1.08; letter-spacing:-.045em; margin: 16px 0 22px; max-width: 760px; }
+    .hero p { font-size:18px; color:#e5e7fa; max-width:720px; margin:0; }
+    .hero-card { background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.22); border-radius:24px; padding:25px; backdrop-filter: blur(8px); box-shadow: 0 20px 55px rgba(0,0,0,.16); }
+    .hero-card h3 { margin: 0 0 12px; font-size:15px; color:#fff; }
+    .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; }
+    .flow span { background:#fff; color:var(--navy); border-radius:999px; padding:5px 10px; font-weight:700; }
+    .flow span.gate { background:var(--orange); color:#fff; }
+    .flow i { color:#cdd2ff; font-style:normal; }
+    .wrap { max-width:1240px; margin:auto; padding: 58px 28px 100px; }
+    .section { margin-top:78px; scroll-margin-top: 95px; }
+    .section:first-child { margin-top:0; }
+    .section-head { display:flex; justify-content:space-between; gap:20px; align-items:end; margin-bottom:25px; }
+    .section-head h2 { margin:0; font-size:32px; letter-spacing:-.03em; line-height:1.2; }
+    .section-head p { margin:0; color:var(--muted); max-width:610px; font-size:14px; }
+    .kpis { display:grid; grid-template-columns: repeat(4, 1fr); gap:14px; }
+    .kpi { background:var(--paper); border:1px solid var(--line); border-radius:17px; padding:20px; box-shadow:var(--shadow); }
+    .kpi strong { display:block; font-size:32px; color:var(--purple); line-height:1; margin-bottom:8px; }
+    .kpi span { color:var(--muted); font-size:13px; }
+    .architecture { background:var(--navy); color:#fff; border-radius:22px; padding:28px; display:grid; grid-template-columns:1fr auto 1fr auto 1fr auto 1fr auto 1fr; gap:10px; align-items:center; box-shadow:var(--shadow); }
+    .arch-step { text-align:center; border:1px solid rgba(255,255,255,.2); padding:16px 8px; border-radius:14px; background:rgba(255,255,255,.07); font-size:13px; height:100%; display:flex; flex-direction:column; justify-content:center; }
+    .arch-step b { display:block; color:#cdd2ff; font-size:11px; margin-bottom:7px; }
+    .arch-arrow { color:#9ea8ff; text-align:center; font-size:22px; }
+    .logic-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; }
+    .logic-card { background:#fff; border:1px solid var(--line); border-radius:20px; padding:28px 30px 27px 32px; position:relative; overflow:hidden; box-shadow:0 10px 32px rgba(17,24,63,.045); }
+    .logic-card::before { content:""; position:absolute; left:0; top:0; width:6px; height:100%; background:var(--purple); }
+    .logic-card.c2::before { background:var(--orange); }
+    .logic-card.c3::before { background:var(--green); }
+    .logic-card.c4::before { background:#f2b632; }
+    .logic-card h3 { font-size:22px; line-height:1.3; margin:0 0 11px; letter-spacing:-.025em; }
+    .logic-card h3 small { display:block; font-size:12px; letter-spacing:.08em; color:var(--muted); font-weight:800; margin-bottom:4px; }
+    .logic-card p { margin:0 0 15px; color:var(--muted); font-size:14px; }
+    .logic-card .detail-label { display:block; color:var(--purple); font-size:11px; font-weight:900; letter-spacing:.08em; margin:14px 0 3px; }
+    .logic-card .detail { margin:0; color:var(--ink); font-size:14px; line-height:1.65; }
+    .logic-card ol.steps { margin:4px 0 0; padding-left:20px; font-size:14px; }
+    .logic-card ol.steps li { margin:2px 0; }
+    .logic-card ol.steps li.gate { color:#c85232; font-weight:700; }
+    .logic-card .example { background:var(--soft); border-radius:10px; padding:10px 13px; margin-top:15px; color:#454b68; font-size:13px; line-height:1.6; }
+    .logic-card .example b { color:var(--navy); }
+    .persona-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; }
+    .persona { background:#fff; border:1px solid var(--line); border-radius:20px; padding:24px; box-shadow:0 10px 32px rgba(17,24,63,.045); }
+    .persona .badge { display:inline-block; font-weight:900; font-size:15px; color:#fff; background:var(--navy); border-radius:10px; padding:4px 11px; }
+    .persona:nth-child(2) .badge { background:var(--purple); }
+    .persona:nth-child(3) .badge { background:var(--orange); }
+    .persona:nth-child(4) .badge { background:var(--green); }
+    .persona h3 { font-size:18px; margin:14px 0 6px; }
+    .persona p { margin:0 0 10px; font-size:13px; color:var(--muted); }
+    .persona ul { margin:0; padding-left:18px; font-size:13px; }
+    .tag { display:inline-block; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:800; background:var(--lavender); color:#5149cd; margin:2px 3px 2px 0; }
+    .tag.orange { background:#fff0eb; color:#c85232; }
+    .tag.mint { background:var(--mint); color:#087d65; }
+    .gates { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; }
+    .gate-card { background:#fff3ed; border:1px solid #ffd9cc; border-radius:18px; padding:22px; }
+    .gate-card .num { font-size:12px; font-weight:900; letter-spacing:.08em; color:#c85232; }
+    .gate-card h3 { margin:6px 0 8px; font-size:17px; }
+    .gate-card p { margin:0; font-size:13px; color:#5b4a45; }
+    .decision { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+    .decision-card { border-radius:18px; padding:24px; border:1px solid var(--line); background:#fff; }
+    .decision-card h3 { margin:0 0 12px; font-size:18px; }
+    .decision-card ul { margin:0; padding-left:19px; color:var(--muted); font-size:14px; }
+    .decision-card.purple { background:var(--lavender); border-color:#d8d5ff; }
+    .decision-card.orange { background:#fff3ed; border-color:#ffd9cc; }
+    .industry-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; }
+    .industry { background:#fff; border:1px solid var(--line); border-radius:18px; padding:24px; }
+    .industry h3 { margin:0 0 4px; font-size:19px; }
+    .industry .goal { color:var(--purple); font-weight:800; font-size:13px; margin-bottom:13px; }
+    .industry table { width:100%; border-collapse:collapse; font-size:13px; }
+    .industry th,.industry td { text-align:left; border-top:1px solid var(--line); padding:8px 4px; vertical-align:top; }
+    .industry th { color:var(--muted); font-weight:600; width:34%; }
+    .hearing { background:#fff; border:1px solid var(--line); border-radius:20px; overflow:hidden; box-shadow:0 10px 32px rgba(17,24,63,.045); }
+    .hearing table { width:100%; border-collapse:collapse; font-size:14px; }
+    .hearing th, .hearing td { text-align:left; padding:13px 18px; border-top:1px solid var(--line); vertical-align:top; }
+    .hearing thead th { border-top:0; background:var(--navy); color:#d9dcf3; font-size:12px; letter-spacing:.06em; font-weight:700; }
+    .hearing td.key { width:70px; }
+    .hearing thead th { white-space:nowrap; }
+    .hearing td.key span { display:inline-flex; width:30px; height:30px; align-items:center; justify-content:center; border-radius:9px; background:var(--lavender); color:#5149cd; font-weight:900; }
+    .hearing td b { display:block; color:var(--navy); }
+    .hearing td small { color:var(--muted); }
+    .hearing .table-scroll { overflow-x:auto; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .terminal { background:#0d1230; color:#e5e7fa; border-radius:18px; padding:22px 24px; font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size:13px; line-height:1.7; box-shadow:var(--shadow); overflow-x:auto; }
+    .terminal .label { display:block; font-family: Inter, "Noto Sans JP", sans-serif; font-size:11px; font-weight:900; letter-spacing:.1em; color:#9ea8ff; margin-bottom:10px; }
+    .terminal pre { margin:0; white-space:pre-wrap; word-break:break-all; }
+    .terminal .cmd { color:#ffb49f; }
+    .terminal .cmt { color:#8a91c4; }
+    .rollout { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; }
+    .phase { background:#fff; border:1px solid var(--line); border-radius:17px; padding:21px; }
+    .phase .num { display:inline-flex; width:29px; height:29px; align-items:center; justify-content:center; background:var(--navy); color:#fff; border-radius:50%; font-weight:800; font-size:13px; }
+    .phase h3 { font-size:16px; margin:12px 0 7px; }
+    .phase p { margin:0; font-size:13px; color:var(--muted); }
+    .callout { margin-top:22px; padding:22px 25px; border-radius:18px; background:linear-gradient(100deg,#e9e8ff,#f8f6ff); border:1px solid #d8d5ff; }
+    .callout strong { color:var(--navy); }
+    .footer { background:var(--navy); color:#d9dcf3; padding:38px 28px; }
+    .footer-inner { max-width:1240px; margin:auto; display:flex; justify-content:space-between; gap:20px; font-size:12px; }
+    .footer a { text-decoration:underline; }
+    code { background:#f0f1f7; color:#413aa5; border-radius:5px; padding:2px 5px; font-size:.9em; word-break:break-all; }
+    @media (max-width: 900px) { .hero-inner,.decision,.two-col { grid-template-columns:1fr; } .persona-grid,.gates,.kpis,.rollout { grid-template-columns:repeat(2,1fr); } .architecture { grid-template-columns:1fr; } .arch-arrow { transform:rotate(90deg); } .industry-grid { grid-template-columns:1fr; } }
+    @media (max-width: 600px) { .topbar-inner { padding:0 18px; } .nav { display:none; } .brand-label { display:none; } .hero-inner,.wrap { padding-left:18px; padding-right:18px; } .hero-inner { padding-top:64px; padding-bottom:60px; } .logic-grid,.persona-grid,.gates,.kpis,.rollout { grid-template-columns:1fr; } .section-head { display:block; } .section-head p { margin-top:10px; } .logic-card { padding:24px 22px 22px 26px; } .hearing th, .hearing td { padding:11px 12px; } .footer-inner { flex-direction:column; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top"><img src="treasure-ai-logo-white.png" alt="Treasure AI"><span class="brand-label">CRM PDCA Skill Guide</span></a>
+      <nav class="nav"><a href="#architecture">Setup</a><a href="#personas">Personas</a><a href="#phases">PDCA</a><a href="#gates">Approvals</a><a href="#types">Use cases</a><a href="#start">Get started</a></nav>
+    </div>
+  </header>
+  <main id="top">
+    <section class="hero">
+      <div class="hero-inner">
+        <div>
+          <div class="eyebrow">Treasure AI Studio / CRM operations playbook</div>
+          <h1>Treasure AI - CRM施策PDCA Skill 活用ガイド</h1>
+          <p>休眠掘り起こし、新作告知、F2転換などのCRM施策を、4つのAIペルソナが分担して <b>Plan → Do → Check → Action</b> まで回します。人は要所の意思決定に集中し、学びはプロジェクトをまたいで蓄積されます。</p>
+        </div>
+        <div class="hero-card">
+          <h3>1サイクルの流れ</h3>
+          <div class="flow"><span>Plan</span><i>→</i><span class="gate">承認①②③</span><i>→</i><span>Do</span><i>→</i><span>Check</span><i>→</i><span>Action</span><i>→</i><span class="gate">承認④</span></div>
+          <p style="font-size:13px;margin-top:18px;color:#d9dcf3;">分析・設計・レポートはAIが担当し、方向性・KPI・配信内容・次の一手は人が決めます。<code style="background:rgba(255,255,255,.14);color:#fff;">tdx</code> の実行や配信の前にも、必ず確認が入ります。</p>
+        </div>
+      </div>
+    </section>
+    <div class="wrap">
+      <section class="section" id="overview">
+        <div class="section-head"><h2>このSkillでできること</h2><p>CRM担当者1人でも、PM・アナリスト・施策担当・クリエイティブのチームで進めるような段取りで施策を回せます。</p></div>
+        <div class="kpis"><div class="kpi"><strong>4</strong><span>AIペルソナ（PM・分析・施策・CR）</span></div><div class="kpi"><strong>4</strong><span>スキップできない人の承認ポイント</span></div><div class="kpi"><strong>7</strong><span>対応する施策タイプ</span></div><div class="kpi"><strong>10〜15分</strong><span>対話形式の初期セットアップ</span></div></div>
+      </section>
+
+      <section class="section" id="architecture">
+        <div class="section-head"><h2>セットアップの仕組み</h2><p>特定企業のテーブル定義は持っていません。最初に環境をヒアリングし、その会社専用の設定と分析SQLを生成してから使います。</p></div>
+        <div class="architecture"><div class="arch-step"><b>01 / LOAD</b>GitHubのURLを<br>Treasure AI Studioに渡す</div><div class="arch-arrow">→</div><div class="arch-step"><b>02 / HEARING</b>データ環境を<br>A〜Gの7テーマで確認</div><div class="arch-arrow">→</div><div class="arch-step"><b>03 / VERIFY</b>tdxでスキーマを確認<br>（承認制・読み取り専用）</div><div class="arch-arrow">→</div><div class="arch-step"><b>04 / GENERATE</b>environment.yml<br>data-sources.md</div><div class="arch-arrow">→</div><div class="arch-step"><b>05 / RUN</b><code style="background:rgba(255,255,255,.14);color:#fff;">/crm-pdca</code><br>で起動</div></div>
+        <div class="callout"><strong>設定の中心：</strong> <code>.claude/skills/crm-pdca/config/environment.yml</code> にテーブル・ID対応・売上ルール・Parent Segment・チャネルを集約。<code>reference/data-sources.md</code> には、実際のテーブル名・カラム名に置き換えた、そのまま実行できる定番SQLが入ります。分からない項目は <code>&lt;TO_BE_CONFIRMED&gt;</code> として残り、必要になった時点でAIが改めて確認します。</div>
+      </section>
+
+      <section class="section" id="personas">
+        <div class="section-head"><h2>4つのAIペルソナ</h2><p>発言の冒頭にペルソナ名が付くので、誰の立場の提案かが一目で分かります。任せる範囲は、プロジェクトごとにペルソナ単位で決めます。</p></div>
+        <div class="persona-grid">
+          <article class="persona"><span class="badge">【PM】</span><h3>プロジェクトマネージャー</h3><p>施策全体の進行役。目的・制約をヒアリングし、各担当に指示書を出し、承認の場を回します。</p><ul><li>施策ブリーフの作成</li><li>承認ポイントの進行</li><li>進捗・意思決定の記録</li><li>学びの横展開の提案</li></ul></article>
+          <article class="persona"><span class="badge">【分析】</span><h3>分析担当</h3><p>「数字で語る」担当。事前分析で対象の規模と特徴を示し、配信後はKPIの達成度を判定します。</p><ul><li>セグメント候補の人数試算</li><li>KPIの現状値の算出</li><li>配信・流入・行動・購買の分析</li><li>コントロール群との比較</li></ul></article>
+          <article class="persona"><span class="badge">【施策】</span><h3>施策担当</h3><p>方向性を実行できる配信プランに落とし込みます。チャネル選定・セグメント定義・配信実務を担当します。</p><ul><li>チャネルとスケジュールの設計</li><li>セグメント条件の定義</li><li>配信上限と重複のチェック</li><li>CJOジャーニーの設計</li></ul></article>
+          <article class="persona"><span class="badge">【CR】</span><h3>クリエイティブ企画</h3><p>方向性を「読まれる・響く・動かす」表現に変えます。訴求軸・コピー・A/Bテストを設計します。</p><ul><li>件名・本文・CTAの案出し</li><li>A/Bテストの設計（1変数ずつ）</li><li>法務・配信前のチェック</li><li>開封率・CTRの読み解き</li></ul></article>
+        </div>
+        <div class="decision" style="margin-top:18px;">
+          <div class="decision-card purple"><h3>任せる範囲の3段階</h3><ul><li><b>full_auto：</b>AIが自律的に判断・実行（定型化した週次分析など）</li><li><b>consult：</b>AIが提案し、人が決める（新しい施策の標準）</li><li><b>human_led：</b>人が主導し、AIは補助（初めての施策タイプなど）</li></ul></div>
+          <div class="decision-card orange"><h3>どの範囲でも変わらないルール</h3><ul><li>4つの承認ポイントは、full_autoでもスキップしない</li><li><code>tdx</code> を実行する前に、コマンドと目的を示して承認を取る</li><li>配信（外部への送信）は、件数・チャネル・日時を確認してから実行</li><li>設定にないテーブル・カラムは推測せず、確認してから使う</li></ul></div>
+        </div>
+      </section>
+
+      <section class="section" id="phases">
+        <div class="section-head"><h2>PDCAの4フェーズ</h2><p>各フェーズの成果物は <code>projects/&lt;project-id&gt;/</code> に保存され、進捗は <code>project_state.json</code> で一元管理します。フェーズ単位での起動もできます。</p></div>
+        <div class="logic-grid">
+          <article class="logic-card"><h3><small>PHASE 1 · /crm-plan</small>Plan — 施策を設計する</h3><p>目的のヒアリングから、分析・方向性・KPI・セグメント・クリエイティブまでを決め、配信できる状態にします。</p><span class="detail-label">進め方</span><ol class="steps"><li>【PM】目的・ターゲット仮説・期待成果・制約をヒアリング</li><li>【PM】→【分析】分析の指示書を発行</li><li>【分析】対象の規模・特徴・KPIの現状値を分析</li><li class="gate">承認① 施策の方向性</li><li class="gate">承認② KPIと目標値</li><li>【施策】セグメント・チャネル設計 ／【CR】訴求軸・コピー（並行）</li><li class="gate">承認③ セグメント＆クリエイティブ最終確認</li><li>セグメント作成、配信ツールでコンテンツを仕上げる</li></ol><div class="example"><b>成果物：</b>brief.md / analysis.md / direction.md / kpi.md / segment_spec.md / creative_spec.md</div><span class="tag">ヒアリング</span><span class="tag orange">承認3回</span></article>
+          <article class="logic-card c2"><h3><small>PHASE 2 · /crm-do</small>Do — 配信する</h3><p>配信直前の最終チェックをすべてクリアしてから実行し、何をいつ誰に送ったかを記録します。</p><span class="detail-label">配信直前チェック</span><p class="detail">セグメント件数・除外対象・配信許諾・配信上限・リンク切れ・差し込みのダミー値・コントロール群・配信時間帯・法務チェック</p><span class="detail-label">問題があったら？</span><p class="detail">PMがすぐに人へエスカレーションし、配信を止めるか、修正して再承認を取ります。</p><div class="example"><b>成果物：</b>delivery_log.md（日時・チャネル・セグメント・配信数・ジョブID）と配信直後のスナップショット</div><span class="tag orange">外部送信は要承認</span><span class="tag">配信ログ</span></article>
+          <article class="logic-card c3"><h3><small>PHASE 3 · /crm-check</small>Check — 効果を測る</h3><p>配信から一定期間（既定3日）待ってから、5つの観点で多角的に分析し、KPIと数値で突き合わせます。</p><span class="detail-label">分析の観点</span><p class="detail"><b>A</b> 配信（到達・開封・CTR・エラー） <b>B</b> Web流入 <b>C</b> サイト内行動 <b>D</b> 購買（CV・CVR・売上・LTV増分） <b>E</b> セグメント別・コントロール群比較</p><span class="detail-label">判定基準（変更可）</span><p class="detail">達成率 ◎110%以上 / ○90〜110% / △70〜90% / ✗70%未満</p><div class="example"><b>成果物：</b>analysis_report.md / insights.md（主要発見3つ・想定外の発見・次サイクルの仮説）</div><span class="tag mint">数値で判定</span><span class="tag">振り返り会議</span></article>
+          <article class="logic-card c4"><h3><small>PHASE 4 · /crm-action</small>Action — 次の一手を決める</h3><p>PMが総括し、施策担当とCRが修正案・継続案を出して、次のサイクルを人が決めます。</p><span class="detail-label">選択肢</span><p class="detail"><b>A</b> 現状継続（対象拡大） <b>B</b> 修正して継続 <b>C</b> 中止・ピボット <b>D</b> プロジェクト完了（学びを横展開）</p><span class="detail-label">その後</span><p class="detail">継続・修正ならサイクル番号を増やしてPlanへ戻ります。完了なら学びを <code>projects/learnings.md</code> に追記し、横展開できるプロジェクトを提案します。</p><div class="example"><b>成果物：</b>next_action.md（決定内容・判断理由・承認日時）</div><span class="tag orange">承認④</span><span class="tag mint">学びの蓄積</span></article>
+        </div>
+      </section>
+
+      <section class="section" id="gates">
+        <div class="section-head"><h2>人が決める4つのポイント</h2><p>AIが先に進めすぎないよう、ここだけは必ず止まって確認を取ります。選択肢と推奨案がセットで提示されます。</p></div>
+        <div class="gates">
+          <div class="gate-card"><span class="num">APPROVAL 01 · PLAN</span><h3>施策の方向性</h3><p>分析結果をもとに、ターゲットと訴求軸の案（A/B）からどれで進めるかを決めます。</p></div>
+          <div class="gate-card"><span class="num">APPROVAL 02 · PLAN</span><h3>KPIと目標値</h3><p>Checkで良し悪しを判定する主KPI・副KPIと目標値を、配信前に確定させます。</p></div>
+          <div class="gate-card"><span class="num">APPROVAL 03 · PLAN</span><h3>セグメント＆クリエイティブ</h3><p>セグメント作成・配信ツールへ投入する直前の最終確認です。承認・修正・中止から選びます。</p></div>
+          <div class="gate-card"><span class="num">APPROVAL 04 · ACTION</span><h3>次サイクルの意思決定</h3><p>Checkの結果を受けて、継続・修正・中止・完了のどれにするかを決めます。</p></div>
+        </div>
+        <div class="callout"><strong>なぜKPIを配信前に決めるのか：</strong> 配信後に指標を選ぶと、良かった数字だけを拾ってしまいがちです。承認②で判定基準を先に固めておくことで、Checkの判定が主観に流れません。</div>
+      </section>
+
+      <section class="section" id="hearing">
+        <div class="section-head"><h2>セットアップで確認すること</h2><p>Treasure Dataにあるデータの場所と、自社の売上ルールを確認します。分からない項目は「後で」と答えれば先に進めます。</p></div>
+        <div class="hearing"><div class="table-scroll"><table>
+          <thead><tr><th>テーマ</th><th>確認する内容</th><th>使われる場面</th></tr></thead>
+          <tbody>
+            <tr><td class="key"><span>A</span></td><td><b>組織・基本設定</b><small>会社・ブランド名、複数ブランドの区別、タイムゾーン、通貨と税込/税抜</small></td><td>レポートの見出し、期間の集計</td></tr>
+            <tr><td class="key"><span>B</span></td><td><b>顧客（会員）マスタ</b><small>顧客ID、チャネル別の配信許諾、属性、集計済みのRFM・LTV、除外すべき顧客</small></td><td>セグメント条件、休眠・LTV分析</td></tr>
+            <tr><td class="key"><span>C</span></td><td><b>購買データと売上ルール</b><small>1行の単位、注文ID、金額の重複、キャンセル・返品の判定、商品・ブランド・カテゴリ</small></td><td>売上・CVR・F2転換の計算</td></tr>
+            <tr><td class="key"><span>D</span></td><td><b>Webアクセスログ</b><small>セッションID、ページ判定（商品詳細・カート・購入完了）、配信経由流入の判定（UTMなど）</small></td><td>CheckのWeb流入・サイト内行動</td></tr>
+            <tr><td class="key"><span>E</span></td><td><b>ID対応</b><small>Web・購買・会員・配信のIDを、どう基準IDにそろえるか</small></td><td>テーブルをまたぐ分析すべて</td></tr>
+            <tr><td class="key"><span>F</span></td><td><b>セグメント・配信基盤</b><small>Parent Segment、チャネル、Engage Studio・CJO・外部ツール、配信結果の集計テーブル、コントロール群</small></td><td>Plan・Doでのセグメント作成と配信</td></tr>
+            <tr><td class="key"><span>G</span></td><td><b>運用ルール</b><small>社内の連携Skill、ペルソナの既定範囲、配信上限、避ける時間帯、法務チェック、判定基準</small></td><td>配信前チェック、KPI判定</td></tr>
+          </tbody>
+        </table></div></div>
+        <div class="callout"><strong>データがそろっていなくても始められます：</strong> Webログがない環境では、CheckのWeb流入・サイト内行動を省略して進めます。顧客マスタに集計済みのRFM指標がなければ、購買データから算出するSQLが生成されます。</div>
+      </section>
+
+      <section class="section" id="types">
+        <div class="section-head"><h2>施策タイプ別の進め方</h2><p>プロジェクトIDは <code>&lt;目的&gt;-&lt;時期&gt;</code> 形式で命名します。同時に進めるのは3プロジェクトまでが目安です。</p></div>
+        <div class="industry-grid">
+          <article class="industry"><h3>休眠掘り起こし</h3><div class="goal">dormant-revive-2026Q4 · 離反顧客の再アクティブ化</div><table><tr><th>Planの分析</th><td>最終購入からの経過日数別の人数・平均購入回数</td></tr><tr><th>セグメント例</th><td>最終購入から90〜365日、購入1回以上、配信許諾あり</td></tr><tr><th>Checkの要点</th><td>コントロール群との購買率の差、休眠期間帯ごとの反応差</td></tr></table></article>
+          <article class="industry"><h3>新作キャンペーン</h3><div class="goal">spring-new-2026 · 新商品の告知と初動づくり</div><table><tr><th>Planの分析</th><td>ブランド・カテゴリ別の購買者数、関連カテゴリの購買傾向</td></tr><tr><th>セグメント例</th><td>同ブランド・同カテゴリの購買経験者、直近の閲覧者</td></tr><tr><th>Checkの要点</th><td>配信経由の流入と商品ページ到達率、初週の売上</td></tr></table></article>
+          <article class="industry"><h3>F2転換</h3><div class="goal">f2-conv-2026-10 · 初回購入から2回目購入へ</div><table><tr><th>Planの分析</th><td>初回購入者のF2転換率と、転換までの日数</td></tr><tr><th>セグメント例</th><td>購入1回、初回購入から30〜60日経過</td></tr><tr><th>Checkの要点</th><td>配信後14日の2回目購入率、クーポン有無での差</td></tr></table></article>
+          <article class="industry"><h3>クロスセル</h3><div class="goal">cross-sell-brandX-2026 · 別ブランド・別カテゴリの提案</div><table><tr><th>Planの分析</th><td>ブランド間の併買傾向、購買経験ブランドの分布</td></tr><tr><th>セグメント例</th><td>ブランドXのみ購入、ブランドYの閲覧あり</td></tr><tr><th>Checkの要点</th><td>他ブランドの購入率、客単価の変化</td></tr></table></article>
+          <article class="industry"><h3>LTV向上・VIP施策</h3><div class="goal">ltv-up-vip-2026H2 · 優良顧客のさらなる引き上げ</div><table><tr><th>Planの分析</th><td>LTV上位層の購買頻度・単価・好みのカテゴリ</td></tr><tr><th>セグメント例</th><td>LTV上位10%、最終購入30日以内</td></tr><tr><th>Checkの要点</th><td>配信後30日のLTV増分（コントロール群との差）</td></tr></table></article>
+          <article class="industry"><h3>離反予防・季節イベント</h3><div class="goal">churn-prev-2026Q4 / xmas-2026 · 引き留めと季節需要</div><table><tr><th>Planの分析</th><td>購入間隔が延びている顧客、過去の同時期の売れ筋</td></tr><tr><th>セグメント例</th><td>平均購入間隔を超えた顧客、昨年同時期の購入者</td></tr><tr><th>Checkの要点</th><td>離反率の変化、イベント期間の売上</td></tr></table></article>
+        </div>
+      </section>
+
+      <section class="section" id="start">
+        <div class="section-head"><h2>はじめ方</h2><p>Treasure AI Studioのチャットに、下のメッセージを貼り付けるだけで始まります。</p></div>
+        <div class="two-col">
+          <div class="terminal"><span class="label">1. セットアップを依頼する</span><pre>https://github.com/tsukaharakazuki/td_tas_skill_extension/tree/main/td-crm-pdca-automation
+このURLを読み込んで、CRM PDCAの設定をしたいです。</pre></div>
+          <div class="terminal"><span class="label">2. セットアップ後のコマンド</span><pre><span class="cmd">/crm-pdca</span>    <span class="cmt"># メイン起動（全フェーズ）</span>
+<span class="cmd">/crm-plan</span>    <span class="cmt"># Plan フェーズだけ</span>
+<span class="cmd">/crm-do</span>      <span class="cmt"># Do フェーズだけ</span>
+<span class="cmd">/crm-check</span>   <span class="cmt"># Check フェーズだけ</span>
+<span class="cmd">/crm-action</span>  <span class="cmt"># Action フェーズだけ</span></pre></div>
+        </div>
+        <div class="terminal" style="margin-top:18px;"><span class="label">セットアップ後の作業フォルダ</span><pre>&lt;作業フォルダ&gt;/
+├── .claude/skills/
+│   ├── crm-pdca/
+│   │   ├── config/environment.yml      <span class="cmt"># 環境設定（セットアップで生成）</span>
+│   │   ├── reference/data-sources.md   <span class="cmt"># この環境用の分析ガイドと定番SQL</span>
+│   │   ├── phases/ personas/ templates/
+│   └── crm-plan/ crm-do/ crm-check/ crm-action/
+└── projects/
+    ├── _index.md                       <span class="cmt"># プロジェクト一覧</span>
+    ├── learnings.md                    <span class="cmt"># プロジェクト横断の学びログ</span>
+    └── &lt;project-id&gt;/01_plan 02_do 03_check 04_action</pre></div>
+      </section>
+
+      <section class="section" id="rollout">
+        <div class="section-head"><h2>推奨導入ステップ</h2><p>最初から全部を任せず、1施策を人と一緒に回して、設定と判定基準を固めてから範囲を広げます。</p></div>
+        <div class="rollout"><div class="phase"><span class="num">1</span><h3>セットアップ</h3><p>テーブル・ID対応・売上ルールを確認。定番SQLが実データで動くことを確かめます。</p></div><div class="phase"><span class="num">2</span><h3>1施策を consult で</h3><p>休眠掘り起こしなど効果の見えやすい施策を、全ペルソナ consult で1サイクル回します。</p></div><div class="phase"><span class="num">3</span><h3>計測基盤を整える</h3><p>配信結果の集計テーブルとコントロール群の運用を整え、Checkを数値で判定できるようにします。</p></div><div class="phase"><span class="num">4</span><h3>並行運用・横展開</h3><p>定型化した分析は full_auto に。学びログを使って、複数施策を並行で回します。</p></div></div>
+        <div class="callout"><strong>設定を変えたいとき：</strong> 同じURLを読み込んで「CRM PDCAの設定を変更したい」と依頼すると、変更したいテーマだけを聞き直します。<code>projects/</code> の既存プロジェクトと学びログは上書きされません。</div>
+      </section>
+    </div>
+  </main>
+  <footer class="footer"><div class="footer-inner"><span>Treasure AI / CRM PDCA Skill Guide</span><span><a href="https://github.com/tsukaharakazuki/td_tas_skill_extension/tree/main/td-crm-pdca-automation">GitHub: td-crm-pdca-automation</a></span></div></footer>
+</body>
+</html>

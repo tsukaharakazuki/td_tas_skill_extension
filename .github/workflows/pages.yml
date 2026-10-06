@@ -1,10 +1,11 @@
-name: Deploy recommendation guide to GitHub Pages
+name: Deploy guides to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
       - 'recommendation-engine-workflow/docs/**'
+      - 'td-crm-pdca-automation/docs/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -28,10 +29,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Configure Pages
         uses: actions/configure-pages@v5
+      - name: Assemble site
+        run: |
+          mkdir -p _site/td-crm-pdca-automation
+          cp -R recommendation-engine-workflow/docs/. _site/
+          cp -R td-crm-pdca-automation/docs/. _site/td-crm-pdca-automation/
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: recommendation-engine-workflow/docs
+          path: _site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
