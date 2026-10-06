@@ -1,0 +1,75 @@
+{
+  "$schema_version": "1.0",
+  "project_id": "<project-id>",
+  "project_name": "<human readable name>",
+  "project_type": "dormant_revive | new_product | f2_conversion | cross_sell | reactivation | other",
+  "status": "active | paused | completed | archived",
+  "current_phase": "plan | do | check | action",
+  "cycle": 1,
+  "created_at": "<ISO8601>",
+  "updated_at": "<ISO8601>",
+  "owner_human": "<クライアント名>",
+  "pm_scope": {
+    "project_manager": "full_auto | consult | human_led",
+    "analyst": "full_auto | consult | human_led",
+    "campaign_manager": "full_auto | consult | human_led",
+    "creative_planner": "full_auto | consult | human_led"
+  },
+  "schedule": {
+    "plan_start": "<YYYY-MM-DD>",
+    "plan_end": "<YYYY-MM-DD>",
+    "do_start": "<YYYY-MM-DD>",
+    "do_end": "<YYYY-MM-DD>",
+    "check_start": "<YYYY-MM-DD>",
+    "action_decision_by": "<YYYY-MM-DD>"
+  },
+  "approvals": {
+    "direction": {
+      "approved": false,
+      "approved_at": null,
+      "decision": null,
+      "note": null
+    },
+    "kpi": {
+      "approved": false,
+      "approved_at": null,
+      "decision": null,
+      "note": null
+    },
+    "final_check": {
+      "approved": false,
+      "approved_at": null,
+      "decision": null,
+      "note": null
+    },
+    "next_action": {
+      "approved": false,
+      "approved_at": null,
+      "decision": null,
+      "note": null
+    }
+  },
+  "artifacts": {
+    "brief": "01_plan/brief.md",
+    "analysis": "01_plan/analysis.md",
+    "direction": "01_plan/direction.md",
+    "kpi": "01_plan/kpi.md",
+    "segment_spec": "01_plan/segment_spec.md",
+    "creative_spec": "01_plan/creative_spec.md",
+    "delivery_log": "02_do/delivery_log.md",
+    "analysis_report": "03_check/analysis_report.md",
+    "insights": "03_check/insights.md",
+    "next_action": "04_action/next_action.md"
+  },
+  "kpi_targets": [],
+  "kpi_results": [],
+  "history": [
+    {
+      "ts": "<ISO8601>",
+      "phase": "plan",
+      "actor": "pm",
+      "event": "project_created",
+      "detail": ""
+    }
+  ]
+}

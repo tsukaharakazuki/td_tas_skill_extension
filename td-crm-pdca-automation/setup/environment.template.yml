@@ -1,0 +1,135 @@
+# CRM PDCA 環境設定
+# セットアップSkillがヒアリング結果で埋め、作業フォルダの
+#   .claude/skills/crm-pdca/config/environment.yml
+# として保存します。分からない値は <TO_BE_CONFIRMED> のまま残してください。
+# APIキー・パスワード・個人のメールアドレスは書かないでください。
+
+schema_version: 1
+
+organization:
+  name: "<TO_BE_CONFIRMED>"           # A1 レポート見出しに使う会社名・ブランド名
+  multi_brand: false                  # A2
+  brand_column: null                  # A2 複数ブランドの場合のカラム（purchase側）
+  timezone: "Asia/Tokyo"              # A3 TD_INTERVAL / TD_TIME_FORMAT に渡す値
+  currency: "JPY"                     # A4
+  amount_tax: "included"              # A4 included | excluded
+
+tables:
+  customer:                           # B 顧客（会員）マスタ
+    enabled: true
+    name: "<TO_BE_CONFIRMED>"         # <db>.<table>
+    grain: "1 customer per row"       # 履歴型なら latest_row_rule も記入
+    latest_row_rule: null
+  purchase:                           # C 購買（注文）データ
+    enabled: true
+    name: "<TO_BE_CONFIRMED>"
+    grain: "<TO_BE_CONFIRMED>"        # order | order_line
+    additional: []                    # EC/POSで別テーブルがある場合 [{name:, note:}]
+  weblog:                             # D Webアクセスログ
+    enabled: true
+    name: "<TO_BE_CONFIRMED>"
+
+columns:
+  customer:
+    customer_id: "<TO_BE_CONFIRMED>"           # B3
+    permission:                                # B4 配信許諾（チャネルごと）
+      email: { column: "<TO_BE_CONFIRMED>", allowed_value: "<TO_BE_CONFIRMED>" }
+      line:  { column: null, allowed_value: null }
+    gender: null                               # B5
+    birthday_or_age: null
+    prefecture: null
+    recency_days: null                         # B6 最終購入からの日数
+    order_count: null                          # B6 累計購入回数
+    ltv: null                                  # B6 累計購入金額
+    first_order_date: null                     # B6
+    rank: null                                 # B6 会員ランク
+  purchase:
+    customer_id: "<TO_BE_CONFIRMED>"           # C3
+    order_id: "<TO_BE_CONFIRMED>"              # C4
+    ordered_at: "time"                         # C5 unixtime の time か、別カラムか
+    ordered_at_type: "unixtime"                # unixtime | timestamp_string
+    amount: "<TO_BE_CONFIRMED>"                # C6
+    amount_is_order_total_on_each_line: false  # C6 true なら order_id で重複排除
+    product_id: null                           # C8
+    product_name: null
+    brand: null
+    category: null
+    purchase_seq: null                         # C9 何回目の購入か（無ければ算出）
+    channel: null                              # C10 EC/店舗 区分
+  weblog:
+    session_id: "<TO_BE_CONFIRMED>"            # D2
+    customer_id: null                          # D3 ログイン時の顧客ID
+    url_or_path: "<TO_BE_CONFIRMED>"           # D4
+    utm_source: null                           # D6
+    utm_medium: null
+    utm_campaign: null
+    custom_param: null                         # D5/D6 独自パラメータ（例: 配信識別子を入れる独自パラメータ）
+    device: null                               # D7
+    duration: null
+
+page_rules:                                    # D4 SQLのWHERE句として書く
+  product_detail: null                         # 例: "td_path LIKE '/item/%'"
+  cart: null
+  purchase_complete: null
+
+inflow_rule: "<TO_BE_CONFIRMED>"               # D5 配信経由流入の判定（SQL条件、{campaign} を置換して使う）
+
+business_rules:
+  valid_order_condition: "<TO_BE_CONFIRMED>"   # C7 キャンセル・返品を除く条件（SQLのWHERE句）
+  excluded_customer_condition: null            # B7 社員・テスト会員・退会者の除外条件
+  order_dedupe_key: null                       # C6 重複排除に使うキー（通常 order_id）
+
+derived_metrics:
+  source: "customer"                           # customer（B6のカラムを使う）| purchase（購買から算出）
+
+id_mapping:                                    # E
+  base_id: "customer.customer_id"
+  web_to_base: "<TO_BE_CONFIRMED>"             # same | hashed(<方法>) | via(<db.table>: <key>)
+  purchase_to_base: "same"
+  delivery_to_base: "<TO_BE_CONFIRMED>"
+  order_id_web_to_purchase: "same"
+  notes: ""
+
+audience:                                      # F1-F2
+  tool: "audience_studio"                      # audience_studio | sql_table | other
+  parent_segments:
+    - id: "<TO_BE_CONFIRMED>"
+      name: "<TO_BE_CONFIRMED>"
+      purpose: "default"
+
+delivery:                                      # F3-F5, F7
+  channels: []                                 # email | line | sms | app_push | web | ads | dm
+  tools: []                                    # engage_studio | cjo | <外部ツール名>
+  engage_workspace: null
+  control_group:
+    enabled: true
+    ratio: 0.1
+
+engage_analytics:                              # F6 配信結果の集計テーブル
+  available: false
+  tables: []                                   # [{name: "<db.table>", content: "open/click/bounce"}]
+  package_url: "https://github.com/tsukaharakazuki/td_onb_pkg/tree/main/td_engage_studio_analytics"
+
+related_skills:                                # G1（無ければ null）
+  sql_guideline: null                          # null の場合 reference/data-sources.md を使う
+  segment_builder: null
+  cjo: "cjo-journey-tips"                      # td_tas_skill_extension に同梱
+  dashboard_mail: "html-dashboard-mail-workflow"
+
+defaults:
+  pm_scope:                                    # G2（プロジェクト開始時に毎回確認する）
+    project_manager: "consult"
+    analyst: "consult"
+    campaign_manager: "consult"
+    creative_planner: "consult"
+  frequency_cap: "<TO_BE_CONFIRMED>"           # G3 例: "週3通まで"
+  avoid_send_windows: ["深夜(22:00-7:00)", "休日早朝"]  # G4
+  check_wait_days: 3                           # G6
+  ltv_followup_days: 30                        # G6
+  kpi_judgement:                               # G7 達成率の閾値（%）
+    excellent: 110
+    good: 90
+    fair: 70
+
+compliance:                                    # G5
+  checks: ["景品表示法", "特定商取引法"]

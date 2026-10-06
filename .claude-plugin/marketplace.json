@@ -5,8 +5,8 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.8.0",
-    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, and cart-abandonment automation"
+    "version": "1.9.0",
+    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, and CRM PDCA automation"
   },
   "plugins": [
     {
@@ -97,6 +97,15 @@
       "strict": false,
       "skills": [
         "./cart-abandonment-workflow"
+      ]
+    },
+    {
+      "name": "td-crm-pdca-automation",
+      "description": "CRM施策のPDCA（Plan→Do→Check→Action）を4つのAIペルソナ（PM・分析・施策・クリエイティブ）で回すSkillセットを、作業フォルダへ対話しながらセットアップする。DB・テーブル・カラム・ID対応・売上ルール・Parent Segment・配信チャネルをヒアリングして環境設定を生成し、/crm-pdca で起動できる状態にする。「CRM PDCAを設定したい」「crm-pdcaをセットアップ」「CRM施策のPDCAを回したい」などで発動する。",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./td-crm-pdca-automation"
       ]
     }
   ]
