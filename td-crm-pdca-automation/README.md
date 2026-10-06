@@ -2,7 +2,9 @@
 
 CRM施策の **Plan → Do → Check → Action** を、4つのAIペルソナ（PM・分析・施策・クリエイティブ）と人間の意思決定で回すための Skill セットです。Treasure AI Studio / Claude Code で動作します。
 
-解説ページ: https://tsukaharakazuki.github.io/td_tas_skill_extension/td-crm-pdca-automation/
+**📖 [解説ページを開く（CRM施策PDCA Skill 活用ガイド）](https://tsukaharakazuki.github.io/td_tas_skill_extension/td-crm-pdca-automation/)**
+
+4つのペルソナ、PDCAの各フェーズ、人が決める承認ポイント、セットアップで確認する内容を図解しています。
 
 特定企業のテーブル定義は含んでいません。初回に対話形式のセットアップを行い、利用者のデータ環境（テーブル・カラム・ID対応・売上ルール・Parent Segment・配信チャネル）を設定ファイルに落とし込んでから使います。
 
