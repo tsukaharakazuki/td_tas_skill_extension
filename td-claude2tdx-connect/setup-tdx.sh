@@ -78,11 +78,19 @@ _node_ok() {
   [ "$(printf '%s\n22.12.0\n' "$v" | sort -V | head -1)" = "22.12.0" ]
 }
 
+# macOS には timeout が無いので、あるものを使う（無ければそのまま実行）
+_with_timeout() {
+  local t="$1"; shift
+  if command -v timeout >/dev/null 2>&1; then timeout "$t" "$@"
+  elif command -v gtimeout >/dev/null 2>&1; then gtimeout "$t" "$@"
+  else "$@"; fi
+}
+
 _npm_view() {  # $1 = registry URL（空なら既定）
   command -v npm >/dev/null 2>&1 || return 1
   local args=(view "@treasuredata/tdx@$TDX_VERSION" version)
   [ -n "${1:-}" ] && args+=(--registry "$1")
-  local out; out="$(timeout 30 npm "${args[@]}" 2>/dev/null)" || return 1
+  local out; out="$(_with_timeout 30 npm "${args[@]}" 2>/dev/null)" || return 1
   [ "$out" = "$TDX_VERSION" ]
 }
 
@@ -93,11 +101,11 @@ _load_key() {
 
 # ---------- plan ----------
 cmd_plan() {
-  _say "== 環境の診断（作業フォルダ: $TD_WORKDIR / リージョン: $SITE / tdx $TDX_VERSION）"
+  _say "== 環境の診断（作業フォルダ: $TD_WORKDIR / リージョン: $SITE / tdx ${TDX_VERSION}）"
   local td=0 node=0 pub=0 mir=0 bun=0 have=0 bundle=""
 
-  if [ "$(_http "https://$H_API/v3/system/server_status")" = 200 ]; then td=1; _ok "Treasure Data に到達できる（$H_API）"
-  else _ng "Treasure Data に到達できない（$H_API）→ ネットワーク許可に *.treasuredata.com / *.treasuredata.co.jp が必要"; fi
+  if [ "$(_http "https://$H_API/v3/system/server_status")" = 200 ]; then td=1; _ok "Treasure Data に到達できる（${H_API}）"
+  else _ng "Treasure Data に到達できない（${H_API}）→ ネットワーク許可に *.treasuredata.com / *.treasuredata.co.jp が必要"; fi
 
   if _node_ok; then node=1; _ok "Node.js $(node -v)（22.12 以上）"
   elif command -v node >/dev/null 2>&1; then _ng "Node.js $(node -v) は古い（22.12 以上が必要）"
@@ -110,8 +118,8 @@ cmd_plan() {
   else _na "registry.npmjs.org: 到達できない、または npm が無い"; fi
 
   if [ -n "$NPM_REGISTRY" ]; then
-    if _npm_view "$NPM_REGISTRY"; then mir=1; _ok "社内ミラー（$NPM_REGISTRY）から tdx $TDX_VERSION を取得できる"
-    else _ng "社内ミラー（$NPM_REGISTRY）から tdx $TDX_VERSION を取得できない（URL・認証・版を確認）"; fi
+    if _npm_view "$NPM_REGISTRY"; then mir=1; _ok "社内ミラー（${NPM_REGISTRY}）から tdx $TDX_VERSION を取得できる"
+    else _ng "社内ミラー（${NPM_REGISTRY}）から tdx $TDX_VERSION を取得できない（URL・認証・版を確認）"; fi
   else _na "社内ミラー: 未指定（NPM_REGISTRY）"; fi
 
   bundle="$(_latest_bundle)"
@@ -144,7 +152,7 @@ cmd_plan() {
   fi
   _say ""
   _say "== 推奨: プラン $rec"
-  [ -n "$CONF_MODE" ] && _say "   （記録済みの設定: プラン $CONF_MODE）"
+  [ -n "$CONF_MODE" ] && _say "   （記録済みの設定: プラン ${CONF_MODE}）"
   _say "RECOMMENDED=$rec"
   _say "AVAILABLE=$( [ $A = 1 ] && printf A)$( [ $B = 1 ] && printf B)$( [ $C = 1 ] && printf C)D"
 }
@@ -286,8 +294,8 @@ cmd_policy_set() {
   local kv k v
   for kv in "$@"; do
     k="${kv%%=*}"; v="${kv#*=}"
-    case " $POLICY_CATS " in *" $k "*) ;; *) _ng "不明なカテゴリ: $k（$POLICY_CATS）"; return 1 ;; esac
-    case "$v" in none|read|write) ;; *) _ng "不明な水準: $v（none / read / write）"; return 1 ;; esac
+    case " $POLICY_CATS " in *" $k "*) ;; *) _ng "不明なカテゴリ: ${k}（${POLICY_CATS}）"; return 1 ;; esac
+    case "$v" in none|read|write) ;; *) _ng "不明な水準: ${v}（none / read / write）"; return 1 ;; esac
     [ "$k" = admin ] && [ "$v" = write ] && { _ng "admin は read までです"; return 1; }
     spec="$(printf '%s\n' $spec | sed "s/^$k=.*/$k=$v/" | tr '\n' ' ')"
   done
@@ -346,7 +354,7 @@ cmd_policy() {
 # ---------- verify ----------
 cmd_verify() {
   local fail=0 mode="${CONF_MODE:-}"
-  _say "== 検証（プラン ${mode:-未設定} / リージョン $SITE）"
+  _say "== 検証（プラン ${mode:-未設定} / リージョン ${SITE}）"
   [ -n "$mode" ] || { _ng "tdx_setup.conf がありません。先に install を実行してください"; return 1; }
 
   # 1. 通信
@@ -367,7 +375,7 @@ cmd_verify() {
     export PATH="$TD_WORKDIR/runtime/bin:$PATH"
     local v; v="$(tdx --version 2>/dev/null | head -1)"
     if printf '%s' "$v" | grep -q "tdx $TDX_VERSION"; then _ok "版: $v"
-    else _ng "版: '${v:-不明}'（期待: $TDX_VERSION）"; fail=1; fi
+    else _ng "版: '${v:-不明}'（期待: ${TDX_VERSION}）"; fail=1; fi
 
     # 3. 認証
     if tdx --site "$SITE" auth status >/dev/null 2>&1; then _ok "認証: 成功"
@@ -376,7 +384,7 @@ cmd_verify() {
     # 4. 権限範囲（参照のみで確認。操作範囲で不可のものは確認しない）
     local n
     if [ "$(_pol_get data)" = read ] || [ "$(_pol_get data)" = write ]; then
-      n="$(tdx --site "$SITE" databases --json 2>/dev/null | grep -o '"name"' | wc -l | tr -d ' ')"
+      n="$(tdx --site "$SITE" databases --jsonl 2>/dev/null | grep -c '^[[:space:]]*{')"
       if [ "${n:-0}" -gt 0 ]; then _ok "見えるデータベース: $n 件（多すぎる場合は TD のポリシーで絞る）"
       else _ng "データベースが1件も見えない（権限かリージョンを確認）"; fail=1; fi
     else _na "データベース: 操作範囲で不可のため確認しない"; fi
@@ -415,7 +423,7 @@ cmd_verify() {
         if [ "$mode" = D ]; then got="$(_tdapi_check $cat $probe)"
         else got="$(TD_ALLOW_WRITE=1 TD_WORKDIR="$TD_WORKDIR" bash "$TD_WORKDIR/tdx-guard.sh" --check $chk | cut -f1)"; fi
         [ -z "$got" ] && continue
-        if [ "$got" != "$exp" ]; then _ng "ガード判定: $cat/$probe が $got（期待 $exp）"; pfail=1; fail=1; fi
+        if [ "$got" != "$exp" ]; then _ng "ガード判定: $cat/$probe が ${got}（期待 ${exp}）"; pfail=1; fail=1; fi
       done
     done
     [ $pfail = 0 ] && _ok "ガード判定: 操作範囲どおり（$(for c in $POLICY_CATS; do printf '%s=%s ' $c "$(_pol_get $c)"; done)）"

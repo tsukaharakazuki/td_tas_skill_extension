@@ -66,7 +66,7 @@ case "$TDX_SITE" in
   ap01|jp01) API=api.treasuredata.co.jp      CDP=api-cdp.treasuredata.co.jp      WF=api-workflow.treasuredata.co.jp ;;
   eu01)      API=api.eu01.treasuredata.com   CDP=api-cdp.eu01.treasuredata.com   WF=api-workflow.eu01.treasuredata.com ;;
   ap02)      API=api.ap02.treasuredata.com   CDP=api-cdp.ap02.treasuredata.com   WF=api-workflow.ap02.treasuredata.com ;;
-  *) die "未知のリージョン: $TDX_SITE（us01 / ap01 / eu01 / ap02）" ;;
+  *) die "未知のリージョン: ${TDX_SITE}（us01 / ap01 / eu01 / ap02）" ;;
 esac
 
 HAS_PY=0; command -v python3 >/dev/null 2>&1 && HAS_PY=1
@@ -90,7 +90,7 @@ call() {
   code="$(http "$@")" || die "接続できませんでした（$2）。ネットワーク許可に *.treasuredata.com / *.treasuredata.co.jp があるか確認してください"
   case "$code" in
     2*) cat "$TMPD/body" ;;
-    401) die "認証失敗 (401)。キーかリージョン（現在: $TDX_SITE）を確認してください" ;;
+    401) die "認証失敗 (401)。キーかリージョン（現在: ${TDX_SITE}）を確認してください" ;;
     403) die "権限不足 (403): $(head -c 400 "$TMPD/body")" ;;
     *)   die "HTTP $code: $(head -c 400 "$TMPD/body")" ;;
   esac
@@ -169,7 +169,7 @@ b = io.StringIO(); csv.writer(b).writerow([c[0] for c in cols]); print(b.getvalu
   local total; total="$(wc -l < "$TMPD/result.csv" | tr -d ' ')"
   if [ -n "$out" ]; then
     { [ -n "$header" ] && echo "$header"; cat "$TMPD/result.csv"; } > "$out"
-    echo "# $total 行を $out に保存しました（job $id）"
+    echo "# $total 行を $out に保存しました（job ${id}）"
   else
     [ -n "$header" ] && echo "$header"
     head -n "$max" "$TMPD/result.csv"
@@ -201,7 +201,7 @@ esac
 DECISION=allow; REASON=""
 if [ "$CAT" != always ]; then
   if [ ! -f "$POLICY" ]; then DECISION=deny; REASON="tdx_policy.conf がありません。setup-tdx.sh policy で操作範囲を設定してください"
-  elif [ "$(rank "$(pol "$CAT")")" -lt "$(rank "$LVL")" ]; then DECISION=deny; REASON="操作範囲外: $CAT は '$(pol "$CAT")' まで（この操作は $LVL）"
+  elif [ "$(rank "$(pol "$CAT")")" -lt "$(rank "$LVL")" ]; then DECISION=deny; REASON="操作範囲外: $CAT は '$(pol "$CAT")' まで（この操作は ${LVL}）"
   elif [ "$LVL" = write ] && [ "${TD_ALLOW_WRITE:-0}" != 1 ]; then DECISION=deny; REASON="書き込み操作です。ユーザーの了承を得てから TD_ALLOW_WRITE=1 を付けて再実行してください"
   fi
 fi
@@ -243,7 +243,7 @@ case "$cmd" in
     resp="$(call POST "$API" "/v3/job/issue/$engine/$db" --data-urlencode "query@$TMPD/sql")" || exit 1
     id="$(printf '%s' "$resp" | grep -oE '"job_id" *: *"?[0-9]+' | grep -oE '[0-9]+$')"
     [ -n "$id" ] || die "ジョブを発行できませんでした: $resp"
-    echo "# job $id を発行（$engine / $db）" >&2
+    echo "# job $id を発行（$engine / ${db}）" >&2
     elapsed=0; st=""
     while [ "$elapsed" -lt "$wait_s" ]; do
       sj="$(call GET "$API" "/v3/job/status/$id")" || exit 1
@@ -259,7 +259,7 @@ case "$cmd" in
 import json,sys; d=json.load(sys.stdin); dbg=d.get("debug") or {}
 print((dbg.get("stderr") or dbg.get("cmdout") or "")[-2000:])' || cat; }
         exit 1 ;;
-      *) echo "# job $id はまだ実行中（$st）。後で: td-api.sh job-status $id / job-result $id" ;;
+      *) echo "# job $id はまだ実行中（${st}）。後で: td-api.sh job-status $id / job-result $id" ;;
     esac
     ;;
   job-status) [ $# -ge 1 ] || die "usage: job-status <job_id>"
@@ -284,5 +284,5 @@ print((dbg.get("stderr") or dbg.get("cmdout") or "")[-2000:])' || cat; }
     case "$2" in /*) ;; *) die "path は / から始めてください" ;; esac
     call GET "$h" "$2" | fmt raw ;;
   help|-h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//' ;;
-  *) die "不明なコマンド: $cmd（help で一覧）" ;;
+  *) die "不明なコマンド: ${cmd}（help で一覧）" ;;
 esac

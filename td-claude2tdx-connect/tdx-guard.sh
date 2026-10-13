@@ -36,7 +36,7 @@ AUDIT="$WORKDIR/tdx_audit.log"
 
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && { CHECK_ONLY=1; shift; }
-ARGS=("$@")
+ARGS=(); [ $# -gt 0 ] && ARGS=("$@")
 
 # ---------- 本物の tdx ----------
 real_tdx() {
@@ -155,16 +155,16 @@ elif [ "$CAT" = blocked ] || [ "$CAT" = unknown ]; then
 elif [ "$CAT" != always ]; then
   allowed="$(pol "$CAT")"
   if [ "$(rank "$allowed")" -lt "$(rank "$LVL")" ]; then
-    DECISION=deny; REASON="操作範囲外: $CAT は '$allowed' まで（この操作は $LVL）"
+    DECISION=deny; REASON="操作範囲外: $CAT は '$allowed' まで（この操作は ${LVL}）"
   elif [ "$LVL" = write ] && [ "${TD_ALLOW_WRITE:-0}" != 1 ] && [ $DRY_RUN = 0 ]; then
-    DECISION=deny; REASON="書き込み操作です。ユーザーの了承を得てから TD_ALLOW_WRITE=1 を付けて再実行してください${WHY:+（$WHY）}"
+    DECISION=deny; REASON="書き込み操作です。ユーザーの了承を得てから TD_ALLOW_WRITE=1 を付けて再実行してください${WHY:+（${WHY}）}"
   fi
 fi
 
 # ---------- 監査ログ ----------
 log_cmd() {
   local out="" a mask=0
-  for a in "${ARGS[@]}"; do
+  for a in ${ARGS[@]+"${ARGS[@]}"}; do
     if [ $mask = 1 ]; then out+=" ***"; continue; fi
     out+=" ${a//$'\n'/ }"
     [ "$a" = set ] && in_list secrets " ${ARGS[*]} " && mask=1   # wf secrets set の値は残さない
@@ -184,4 +184,4 @@ if [ "$DECISION" = deny ]; then
   echo "tdx-guard: 実行しませんでした — $REASON" >&2
   exit 126
 fi
-real_tdx "${ARGS[@]}"
+real_tdx ${ARGS[@]+"${ARGS[@]}"}
