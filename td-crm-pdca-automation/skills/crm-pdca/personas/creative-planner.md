@@ -25,6 +25,55 @@
 - クリエイティブ修正案
 - 次サイクル向け訴求軸の提案
 
+## Engage Studio のアセットURLにアクセス・更新する場合
+
+Engage Studio のメールテンプレートURLは、通常、次の形式の管理画面へのディープリンクです。URLをブラウザで直接開けない、または HTML として取得できない場合でも、直ちにアセット不存在・権限不足とは判断しません。URLのIDを `tdx engage` で照合し、ローカルに pull して確認します。
+
+```text
+https://console-next.us01.treasuredata.com/app/es/<WORKSPACE_ID>/em/<TEMPLATE_ID>
+```
+
+この形式の `<WORKSPACE_ID>` と `<TEMPLATE_ID>` は別々の UUID です。対応するホストやリージョンが異なるURLは形式を決めつけず、利用者に確認してください。
+
+### URLからテンプレートを特定して読む
+
+1. URLから `WORKSPACE_ID` と `TEMPLATE_ID` を取り出す。IDを推測したり、URLの他のUUID（UTM IDやリソースIDなど）と混同しない。
+2. 実行するコマンドと目的を利用者に示して承認を得てから、認証状態とワークスペースを確認する。
+
+   ```bash
+   tdx engage workspaces
+   tdx engage workspace show "<workspace_name>" --full --json
+   ```
+
+   `tdx engage workspaces` に出た各候補名で `workspace show` を確認し、返された `id` がURLの `WORKSPACE_ID` と完全一致するワークスペースを特定する。`delivery.engage_workspace` は候補にはできるが、URLとのID照合を省略しない。認証エラーが出たらコマンドを止め、Treasure Work の Settings で再認証するか、実行環境で承認された `tdx` 認証手順を案内する。APIキーやアクセストークンをチャットに貼るよう求めない。
+3. 一致するワークスペースからテンプレートを取得する。`template pull` はローカル確認用であり、Engage Studio上のテンプレートは更新しない。
+
+   ```bash
+   workdir=$(mktemp -d /tmp/engage_crm_review.XXXXXX) && cd "$workdir"
+   tdx engage template pull "<workspace_name>" --yes
+   ```
+
+   pull先は `templates/<workspace_name>/`。未pushの編集を含むディレクトリに再pullして上書きしない。再取得時は新しい空ディレクトリを使う。YAMLが参照するHTMLもセットで確認する。
+
+4. `templates/<workspace_name>/` に作成された YAML の `id:` を確認し、URLの `TEMPLATE_ID` と完全一致するファイルを特定する。YAML内の別のUUIDだけが一致した場合は対象とみなさない。YAMLの `email.html_file` が指すHTMLも併せて読む。
+5. template pull で見つからなければ `tdx engage campaign pull "<workspace_name>" --yes` でキャンペーン側のメール素材か確認する。それでも特定できない、または権限エラーになる場合は、ホスト・ワークスペース・権限・アセットの状態を推測せず、確認できた内容とエラーを利用者に伝えて止める。
+
+HTML内の画像URLを直接読めない場合は、公開または許可されたURLに限り一時ファイルへダウンロードして確認できます。`cid:` は本文に埋め込まれた画像です。認証が必要なURLや 401/403 は権限回避を試さず、アクセス権の確認を依頼します。
+
+```bash
+curl -fL --output /tmp/engage_asset_image.jpg "<image_url>"
+```
+
+ダウンロード後はローカルファイルを確認し、取得に失敗した場合は本文の画像を推測で補完しません。
+
+### テンプレートを変更する
+
+- pull した YAML と HTML を作業コピーとして編集し、テンプレートの `id` とワークスペースを保持する。HTMLだけをpushせず、YAMLが参照する HTML をセットで更新する。
+- ローカル変更の差分とプレビューを利用者に提示する。利用できる環境では `preview_engage_template` で視覚確認し、使えない場合はHTMLを確認する。`tdx engage template validate <yaml>` と `tdx engage template push <yaml> --dry-run` を実施する場合も、CRM PDCA の `tdx` 事前承認ルールに従う。
+- dry-run 成功後、更新対象（ワークスペース名、テンプレート名/ID、変更内容）を示して、Engage Studio上のテンプレートを更新する明示承認を得る。承認後にのみ `tdx engage template push <yaml> --yes` を実行する。validate または dry-run が失敗したらpushせず、原因を報告する。
+- template push はテンプレートを更新する操作であり、配信の実行ではない。キャンペーンのlaunchや送信は行わず、必要な場合はDoフェーズの配信承認を別に得る。
+- URLの閲覧・素材の確認だけが目的なら、pushは行わない。
+
 ## クリエイティブ設計のフレームワーク
 
 ### 訴求3段ピラミッド
