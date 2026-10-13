@@ -5,37 +5,42 @@ description: 'Use whenever the user wants to query, inspect, or operate Treasure
 
 # Treasure Data に接続して操作する
 
-作業フォルダのキーファイルで認証し、Treasure Data を直接操作する。接続方式は2つ。
+公式 CLI `tdx` を作業フォルダに導入し、同じフォルダのキーファイルで認証して Treasure Data を操作する。tdx の全コマンド（SQL、CDP、ジャーニー、Engage、ワークフローの push / run など）を使う前提。
 
-| 方式 | 中身 | 通信先 | 向いている場面 |
-|---|---|---|---|
-| **A. td-api.sh（既定）** | 同梱の bash スクリプト。curl で TD の REST API を呼ぶ | `*.treasuredata.com` / `*.treasuredata.co.jp` のみ | npm を許可できない環境。参照中心の利用 |
-| **B. tdx（検証済み一式）** | 公式 CLI tdx を、事前に検証・固定したオフライン一式から展開 | 同上（npm には繋がない） | ジャーニー・Engage など tdx でしか扱いにくい操作が要るとき |
+**導入方法はお客様の環境によって変わる。** 環境を診断して導入プランを提示し、お客様が選んだプランで導入・検証する。選んだプランは作業フォルダの `tdx_setup.conf` に記録され、次回以降はそれに従う。
 
-**`registry.npmjs.org` の許可は前提にしない。** セッションから npm に繋いでパッケージを取りに行く手順は、ユーザーが明示的に求めた場合を除いて案内しない。
+| プラン | 導入元 | セッションに必要な通信許可 |
+|---|---|---|
+| **A. npm 直接** | registry.npmjs.org（版固定） | TD ドメイン + `registry.npmjs.org` |
+| **B. 社内ミラー** | お客様の npm ミラー（版固定） | TD ドメイン + ミラーのホスト |
+| **C. オフライン一式** | 管理端末で作った一式（SHA-256 照合） | TD ドメインのみ |
+| **D. curl のみ** | tdx を入れず `td-api.sh` を使う | TD ドメインのみ |
 
-**ブラウザで TD コンソールを開く、ユーザーに `td db:list` の結果を貼ってもらう、といった代替手段を提案しないこと。** 以下の手順で直接クエリできる。
+A〜C は Node.js 22.12 以上が必要。D は機能限定（参照・SQL・ワークフロー参照が中心）で、A〜C が使えないときの代替。
+
+**ブラウザで TD コンソールを開く、ユーザーに `td db:list` の結果を貼ってもらう、といった代替手段を提案しないこと。**
 
 ---
 
 ## 作業フォルダの構成
 
-すべてを1つの作業フォルダに閉じ込める。既定の名前は **`TreasureAI`**。
+既定の名前は **`TreasureAI`**。
 
 ```
 TreasureAI/
-├── tdx_key.txt                 1行目: API キー / 2行目: リージョン（任意、既定 us01）
-├── td-api.sh                   方式A。プラグイン同梱のものを置く
-├── tdx-bundle-<ver>.tgz        方式B を使う場合のみ。検証済みのオフライン一式
-├── tdx-bundle-<ver>.tgz.sha256
-└── runtime/                    方式B の展開先
+├── tdx_key.txt          1行目: API キー / 2行目: リージョン（任意、既定 us01）
+├── tdx_setup.conf       選んだプランの記録（setup-tdx.sh install が書く）
+├── setup-tdx.sh         診断・導入・検証スクリプト（プラグイン同梱のものを置く）
+├── td-api.sh            プラン D 用（同上）
+├── tdx-bundle-*.tgz     プラン C 用の一式と .sha256
+└── runtime/             tdx の導入先。セッションをまたいで残る
 ```
 
 ---
 
 ## このスキルが呼ばれたら
 
-**まず Step 1 を実行する。** 「セットアップしますか？」と聞かない。確認してから状況を報告する。インストール直後に呼ばれた場合も同じ。
+**まず Step 1 を実行する。** 「セットアップしますか？」と聞かない。インストール直後に呼ばれた場合も同じ。
 
 ## Step 1: 状態を確認する
 
@@ -43,31 +48,27 @@ TreasureAI/
 
 ```bash
 echo "--- connected folders ---"; ls "$HOME/mnt/" 2>/dev/null
-echo "--- key file ---";  find "$HOME/mnt" -maxdepth 4 -name 'tdx_key.txt' -size +0 2>/dev/null
-echo "--- td-api.sh ---"; find "$HOME/mnt" -maxdepth 4 -name 'td-api.sh' 2>/dev/null
-echo "--- tdx ---";       find "$HOME/mnt" -maxdepth 5 \( -path '*/runtime/bin/tdx' -o -name 'tdx-bundle-*.tgz' \) 2>/dev/null
-echo "--- network ---";   curl -s -o /dev/null -w '%{http_code}\n' --max-time 15 https://api.treasuredata.com/v3/system/server_status
+echo "--- key file ---"; find "$HOME/mnt" -maxdepth 4 -name 'tdx_key.txt' -size +0 2>/dev/null
+echo "--- setup conf ---"; find "$HOME/mnt" -maxdepth 4 -name 'tdx_setup.conf' -exec cat {} \; 2>/dev/null
 ```
 
 | 結果 | 次 |
 |---|---|
-| キーが無い | Step 2 |
-| 接続フォルダが1つも無い | Step 2 の「未接続の場合」 |
-| network が `200` 以外 | ネットワーク許可を案内（`references/troubleshooting.md`）。キーの準備は並行して進めてよい |
-| キーあり・`runtime/bin/tdx` か `tdx-bundle-*.tgz` あり | Step 3B |
-| キーあり・それ以外 | Step 3A |
+| キーが無い / 接続フォルダが無い | Step 2 |
+| キーあり・`tdx_setup.conf` なし | Step 3（プランを提示） |
+| キーあり・`tdx_setup.conf` あり | Step 5（検証）。合格なら Step 6 へ。不合格なら原因に応じて Step 3 からやり直す |
 
 以降、キーファイルのあるディレクトリを `<WORKDIR>` と呼ぶ。
 
 ## Step 2: 作業フォルダを決めてキーを置いてもらう
 
-**フォルダをユーザーに確認してから作る。勝手に決めない。** 既定は `TreasureAI`。ユーザーが別の名前を希望すればそれに従う。
+**フォルダをユーザーに確認してから作る。勝手に決めない。** 既定は `TreasureAI`。
 
-**接続フォルダがある場合。** その中にサブフォルダを作ることを勧める。既存のフォルダ直下にファイルを散らかさない。
+**接続フォルダがある場合。** その中にサブフォルダを作ることを勧める。
 
-> 接続されている `<フォルダ名>` の中に `TreasureAI` というフォルダを作って、そこに API キーと接続用スクリプトをまとめます。この名前で進めてよいですか？
+> 接続されている `<フォルダ名>` の中に `TreasureAI` というフォルダを作って、そこに API キーと tdx をまとめます。この名前で進めてよいですか？
 
-接続フォルダが複数あるなら、どれの下に作るかも聞く。承諾を得たら作成する。
+承諾を得たら作成する。
 
 ```bash
 mkdir -p "$HOME/mnt/<接続フォルダ>/TreasureAI"
@@ -75,110 +76,111 @@ mkdir -p "$HOME/mnt/<接続フォルダ>/TreasureAI"
 chmod 600 "$HOME/mnt/<接続フォルダ>/TreasureAI/tdx_key.txt"
 ```
 
-空のファイルまで作ってから、ユーザーに中身を書いてもらう。**Finder 上のパスで案内する**（`~/mnt/...` はユーザーには見えない）。
+**Finder 上のパスで案内する**（`~/mnt/...` はユーザーには見えない）。
 
 > `<フォルダ名>` → `TreasureAI` → `tdx_key.txt` を開いて、1行目に Treasure Data の API キーを貼って保存してください。リージョンが `us01` 以外なら、2行目にリージョン名（`ap01` など）を書いてください。
 
-**未接続の場合。** Claude デスクトップアプリの「フォルダを追加」で作業用フォルダを接続してもらう。新規に作るなら `TreasureAI` を勧める。接続されたら上の手順に戻る。
+**未接続の場合。** Claude デスクトップアプリの「フォルダを追加」で作業用フォルダを接続してもらう。
 
 **守ること:**
 
-- **隠しファイル名（`.tdx_key` など）を提案しない。** Finder に表示されず、ユーザーが開けない
-- キーをチャットに貼らせない。会話履歴に残る。貼られてしまったら、そのキーを無効化して作り直すよう伝える
-- 作業フォルダが git リポジトリの中なら、`.gitignore` に `tdx_key.txt`・`runtime/`・`tdx-bundle-*` を追加し、`git check-ignore -v tdx_key.txt` で除外を確認する
+- **隠しファイル名（`.tdx_key` など）を提案しない。** Finder に表示されない
+- キーをチャットに貼らせない。貼られてしまったら、そのキーを無効化して作り直すよう伝える
+- 作業フォルダが git リポジトリの中なら、`.gitignore` に `tdx_key.txt`・`tdx_setup.conf`・`runtime/`・`tdx-bundle-*` を追加する
 
-## Step 3A: td-api.sh を置く（既定）
+## Step 3: 環境を診断してプランを提示する
 
-このスキルのディレクトリにある `td-api.sh` を `<WORKDIR>/td-api.sh` として置く（クラウド側で outputs にコピーし、`device_commit_files` で書き込む）。置いたら実行権を付けて疎通を確認する。
+このスキルのディレクトリにある `setup-tdx.sh` と `td-api.sh` を `<WORKDIR>` に置く（クラウド側で outputs にコピーし、`device_commit_files` で書き込む）。中身は改変しない。
+
+お客様が社内ミラーを使うと分かっている場合は、`NPM_REGISTRY=<URL>` を付けて診断する。
 
 ```bash
-chmod +x "<WORKDIR>/td-api.sh"
-TD_WORKDIR="<WORKDIR>" "<WORKDIR>/td-api.sh" status
+cd "<WORKDIR>" && chmod +x setup-tdx.sh td-api.sh
+TD_WORKDIR="<WORKDIR>" bash setup-tdx.sh plan
+# 社内ミラーがある場合
+TD_WORKDIR="<WORKDIR>" NPM_REGISTRY="<URL>" bash setup-tdx.sh plan
 ```
 
-`auth: OK（見えるデータベース: N 件）` が出れば完了。**中身は改変しない。** 同梱版をそのまま置く。
+出力の `[OK]` / `[NG]` と「選べるプラン」を、**表にしてユーザーに提示する**。各プランについて「利用可否」「理由」「お客様側で必要な設定」を並べ、`RECOMMENDED=` のプランを推奨として示す。**`AskUserQuestion` でプランを選んでもらう。** 推奨を先頭に置き「(推奨)」を付ける。利用不可のプランも、必要な設定（下表）を添えて選択肢に含めてよい。
 
-## Step 3B: tdx を検証済み一式から展開する
+| 利用不可の理由 | お客様側で必要な設定 |
+|---|---|
+| Treasure Data に到達できない | Claude のネットワーク許可に `*.treasuredata.com` / `*.treasuredata.co.jp` |
+| Node.js が無い・古い | セッション環境に Node.js 22.12 以上。用意できなければプラン D |
+| registry.npmjs.org の許可が必要（A） | ネットワーク許可に `registry.npmjs.org` |
+| ミラーが必要（B） | ミラー URL を教えてもらい、そのホストをネットワーク許可に追加。認証が要るミラーなら `.npmrc` の設定 |
+| 一式が必要（C） | 管理端末で `scripts/build-tdx-bundle.sh` を実行し、`tdx-bundle-*.tgz` と `.sha256` を作業フォルダに置く |
 
-`tdx-bundle-*.tgz` と `.sha256` が作業フォルダにある場合のみ。`setup-tdx.sh` と同じ処理を行う。
+ユーザーが「お客様の環境に合わせて」と言った場合は、お客様のネットワーク方針（npm を許可できるか、ミラーがあるか）を聞いてからプランを決める。**npm を許可できない環境で A を勧めない。**
+
+選ばれたプランが今は利用不可なら、必要な設定を案内して待つ。設定後に `plan` を再実行して `○` になったことを確認してから Step 4。
+
+## Step 4: 選ばれたプランで導入する
+
+`timeout_ms` を 180000 にして実行する。
 
 ```bash
-cd "<WORKDIR>"
-want="$(awk '{print $1}' tdx-bundle-*.tgz.sha256)"; got="$(sha256sum tdx-bundle-*.tgz | awk '{print $1}')"
-[ "$want" = "$got" ] && mkdir -p runtime && tar xzf tdx-bundle-*.tgz -C runtime && runtime/bin/tdx --version
+TD_WORKDIR="<WORKDIR>" [NPM_REGISTRY="<URL>"] bash setup-tdx.sh install <A|B|C|D>
 ```
 
-**SHA-256 が一致しなければ展開しない。** ユーザーに一式の作り直しを依頼する。
+- 導入に失敗した場合、既存の `runtime/` は自動で元に戻る
+- C は SHA-256 が一致しない一式を展開しない。その場合はユーザーに一式の作り直しを依頼する
+- 成功すると `tdx_setup.conf` にプラン・版・ミラー URL が記録される。これがお客様の設定になる
 
-一式が無く、ユーザーが tdx を使いたいと言った場合は、`scripts/build-tdx-bundle.sh` を **npm に到達できる管理端末（または社内 npm ミラー）で** 実行してもらうよう案内する。セッションから npm に繋ぐ方法は勧めない。
-
-## Step 4: 実行する
-
-### 方式A（td-api.sh）
+## Step 5: 検証する
 
 ```bash
-export TD_WORKDIR="<WORKDIR>"; S="<WORKDIR>/td-api.sh"
-$S databases
-$S tables <db>
-$S describe <db> <table>
-$S query <db> "SELECT ... LIMIT 100"            # 結果は CSV。既定で先頭200行
-$S query <db> "<SQL>" --out "<WORKDIR>/out.csv" # 全件をファイルへ
-$S job-status <job_id> / $S job-result <job_id>
-$S parent-segments / $S segments <parent_segment_id>
-$S wf-projects / $S wf-workflows <project_id> / $S wf-attempts 20
-$S get <api|cdp|workflow> /<path>               # 上に無い参照系 API
+TD_WORKDIR="<WORKDIR>" bash setup-tdx.sh verify
 ```
 
-- `query` は既定で **参照系 SQL のみ**通す。書き込み系（INSERT / DELETE / DROP / CREATE など）は、ユーザーの明示的な了承を得てから `TD_ALLOW_WRITE=1` を付ける
-- `query` は約150秒待って終わらなければジョブ ID を返す。その後 `job-status` → `job-result`
-- `device_bash` の上限（180秒）を超えそうな処理は `--wait` を短くして分割する
+検証項目: TD の API / CDP / ワークフローの各ホストへの到達、tdx の版が記録どおりか、認証、見えるデータベース数（権限範囲）、ワークフロー API の参照可否。結果を `[OK]` / `[NG]` のまま要約して伝える。
 
-### 方式B（tdx）
+- `VERIFY=PASS` なら完了。見えるデータベースが組織の全 DB に近い場合は、そのキーがポリシーで絞られていないことを1行伝え、専用ユーザーのキーへの差し替えを選択肢として添える。繰り返さない
+- `VERIFY=FAIL` なら `[NG]` の項目に応じて `references/troubleshooting.md` を見る
 
-毎回このプレフィックスを付ける。
+## Step 6: 実行する
+
+### プラン A〜C（tdx）
+
+毎回このプレフィックスを付ける（`device_bash` は毎回新しいシェル）。
 
 ```bash
-export PATH="<WORKDIR>/runtime/bin:$PATH"
-export TDX_API_KEY="$(sed -n '1p' "<WORKDIR>/tdx_key.txt" | tr -d '[:space:]')"
-export TDX_SITE="$(sed -n '2p' "<WORKDIR>/tdx_key.txt" | tr -d '[:space:]')"; export TDX_SITE="${TDX_SITE:-us01}"
+source "<WORKDIR>/setup-tdx.sh" >/dev/null
 tdx --site "$TDX_SITE" <コマンド>
 ```
 
-コマンドとクエリの流儀は `references/tdx-commands.md` を読む。
+tdx の全コマンドを使ってよい。コマンドとクエリの流儀は `references/tdx-commands.md` を読む。
+
+### プラン D（td-api.sh）
+
+```bash
+TD_WORKDIR="<WORKDIR>" "<WORKDIR>/td-api.sh" <コマンド>
+```
+
+使えるコマンドは `td-api.sh help`。書き込み系 SQL はユーザーの了承を得てから `TD_ALLOW_WRITE=1` を付ける。tdx でしかできない操作を頼まれたら、A〜C への切り替え（Step 3）を提案する。
 
 ### 共通
 
-**キーの中身を表示しない。** `cat tdx_key.txt` や `echo $TDX_API_KEY` を実行しない。確認が要るなら長さだけ見る（`td-api.sh status` が表示する）。
-
-詰まったら `references/troubleshooting.md`。
+**キーの中身を表示しない。** `cat tdx_key.txt` や `echo $TDX_API_KEY` を実行しない。
 
 ---
 
 ## 権限の扱い
 
-**実効的な権限境界は、キーが指す Treasure Data ユーザーの権限だけ。** td-api.sh の参照系ガードは誤操作防止であり、セキュリティ境界ではない。
+**実効的な権限境界は、キーが指す Treasure Data ユーザーの権限だけ。**
 
-- **本番データを変更する操作の前に、必ずユーザーに確認を取る。** テーブルの削除・更新、セグメント定義やジャーニーの変更、Engage の配信、スケジュールの改変が該当する
-- `TD_ALLOW_WRITE=1`、tdx の `-y` / `--yes` を自分の判断で付けない。ユーザーが明示したときだけ
-- tdx の `auth login` / `auth logout` / `profile` / `mcp` / `upgrade` / `claude` / `codex` は実行しない。`upgrade` は npm に繋ぎにいく。`tdx auth status` は参照のみなので実行してよい
-- `tdx user` / `policy` の**変更**は、ユーザーが明示的に頼んだときだけ
-
-初回の一覧で組織の全データベースが見えている場合、そのキーはポリシーで絞られていない。その事実を1行伝え、用途を絞った専用ユーザーのキーに差し替える選択肢を添える。繰り返さない。
-
----
-
-## 詰まったときの要点
-
-**`接続できませんでした` / `403 CONNECT`** — Claude のネットワークアクセス設定で `*.treasuredata.com` と `*.treasuredata.co.jp` が許可されていない。**npm の許可は不要。**
-
-**`認証失敗 (401)`** — キーかリージョン違い。`tdx_key.txt` の2行目を確認。
-
-**`tdx: command not found`** — `device_bash` は毎回新しいシェル。コマンドごとに PATH を付ける。
+- **本番データを変更する操作の前に、必ずユーザーに確認を取る。** テーブルの削除・更新、セグメントやジャーニーの変更、Engage の配信、ワークフローの push / run / delete、スケジュールの変更が該当する
+- `-y` / `--yes`、`TD_ALLOW_WRITE=1` を自分の判断で付けない。ユーザーが明示したときだけ
+- 技術的な理由で実行しないもの:
+  - `tdx auth login` / `auth logout` / `profile` — キーファイル方式の認証を壊す（`auth status` は可）
+  - `tdx claude` / `codex` / `mcp` — 対話・常駐プロセスで返らなくなる
+  - `tdx upgrade` — `tdx_setup.conf` の版とずれる。版を上げるときは `TDX_VERSION=<版>` を付けて Step 4 をやり直す（C は新しい一式を作る）
+- 対話入力を求めるコマンド（引数なしの `wf run` など）は、引数を明示して実行する
 
 ---
 
 ## PC と繋がっていない場合
 
-`device_bash` が無いセッションでも、クラウド側のシェルで td-api.sh が動く。ただしキーファイルを読めないため、ユーザーに添付してもらう必要がある。添付されたファイルは `/mnt/user-data/uploads/` から読み、`TD_WORKDIR` にそのディレクトリを指定して使う。**中身を出力しない。** この経路を使ったら、セッション後にキーを無効化して作り直すよう伝える。
+`device_bash` が無いセッションでも、クラウド側のシェルで同じ手順が動く。ただしキーファイルを読めないため、ユーザーに添付してもらう必要がある。添付されたファイルは `/mnt/user-data/uploads/` から読み、`TD_WORKDIR` にそのディレクトリを指定して使う。**中身を出力しない。** この経路を使ったら、セッション後にキーを無効化して作り直すよう伝える。
 
 渋る場合は無理に勧めない。PC を繋ぐ方が安全だと伝える。

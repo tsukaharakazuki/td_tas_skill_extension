@@ -21,11 +21,33 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 15 https://api.treasuredata.
 
 Team / Enterprise では管理者設定。個人アカウントでは設定画面のネットワークアクセス項目。
 
-**`registry.npmjs.org` の許可は不要。** このプラグインはセッションから npm に繋がない。ユーザーや管理者に npm の許可を求めない。
+`registry.npmjs.org` が必要なのはプラン A だけ。お客様が許可できない場合に許可を求めない。
 
 ### `registry.npmjs.org` を許可できないと言われた
 
-許可しなくてよい。既定の方式A（`td-api.sh`）は curl だけで動き、TD のドメインにしか通信しない。tdx が必要なら、管理端末で `scripts/build-tdx-bundle.sh` を実行して検証済み一式を作ってもらう（README の「方式B」）。
+許可しなくてよい。`setup-tdx.sh plan` を再実行し、次から選んでもらう。
+
+- 社内ミラーがある → プラン B（`NPM_REGISTRY=<URL>` を付けて plan）
+- ミラーが無い → プラン C（管理端末で `scripts/build-tdx-bundle.sh` を実行し、一式を作業フォルダに置く）
+- Node.js も用意できない → プラン D（`td-api.sh`、機能限定）
+
+### 社内ミラーで `取得できない`（プラン B）
+
+順に疑う。
+
+1. ミラーのホストがネットワーク許可に入っていない
+2. 認証が要るミラーで `.npmrc` の設定が無い（ミラー管理者に確認）
+3. ミラーに指定の版が同期されていない（`TDX_VERSION` を同期済みの版にするか、ミラー側で取り込んでもらう）
+
+## 検証（setup-tdx.sh verify）の [NG]
+
+| 項目 | 対処 |
+|---|---|
+| 到達できない: api-cdp / api-workflow | 許可が `api.` だけになっている。`*.treasuredata.com` / `*.treasuredata.co.jp` か各ホストを追加 |
+| 版が期待と違う | `tdx upgrade` などで版がずれた。Step 4 で入れ直す |
+| 認証: 失敗 | 下の「認証」を参照 |
+| データベースが1件も見えない | キーのユーザーにポリシーが割り当てられていないか、リージョン違い |
+| ワークフロー API: 参照できない | ポリシーでワークフロー権限が無い。必要ならユーザーの権限を見直してもらう |
 
 ## 認証
 
@@ -54,7 +76,7 @@ Team / Enterprise では管理者設定。個人アカウントでは設定画�
 `<WORKDIR>/runtime/bin` が PATH に入っていない。`device_bash` は毎回新しいシェルなので、コマンドごとに次を付ける。
 
 ```bash
-export PATH="<WORKDIR>/runtime/bin:$PATH"
+source "<WORKDIR>/setup-tdx.sh" >/dev/null
 ```
 
 runtime は接続フォルダの中にあるので消えていない。まず PATH を疑う。
@@ -67,7 +89,7 @@ runtime は接続フォルダの中にあるので消えていない。まず PA
 
 管理端末から `registry.npmjs.org` と `tuf-repo-cdn.sigstore.dev` に到達できる必要がある。社内ミラーで署名検証が通らない場合は、ミラーの管理者に署名の扱いを確認する。`SKIP_SIGNATURE_CHECK=1` で省略できるが、審査に出す一式には使わない。
 
-### td-api.sh: `参照系以外の SQL は既定で止めています`
+### td-api.sh（プラン D）: `参照系以外の SQL は既定で止めています`
 
 書き込み系の SQL と判定された。本当に実行する必要があるならユーザーに確認を取り、了承を得てから `TD_ALLOW_WRITE=1` を付けて再実行する。文字列リテラルの中の単語（`'DELETE'` など）で誤判定されることがあるが、その場合も同じ手順。
 
@@ -112,4 +134,4 @@ Finder は `.` で始まるファイルを表示しない。`tdx_key.txt` のよ
 
 既定は `TreasureAI`。Claude Cowork 用のフォルダを既に接続しているなら、その中にサブフォルダとして作る。既存フォルダの直下にキーファイルや `runtime/` を置かない。
 
-iCloud や Dropbox の同期対象は避ける。方式B の `runtime/` は約 60MB あり、同期の無駄になる。
+iCloud や Dropbox の同期対象は避ける。`runtime/` は約 60MB あり、同期の無駄になる。

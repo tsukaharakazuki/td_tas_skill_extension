@@ -1,37 +1,10 @@
 # td-claude2tdx-connect
 
-Claude から Treasure Data を操作するプラグイン。
+Treasure AI の公式 CLI **[tdx](https://tdx.treasuredata.com/)** を使って、Claude から Treasure Data を操作するプラグイン。
 
-クエリ、スキーマ確認、CDP セグメント、ワークフローの確認などを会話から実行できます。API キーは利用者の PC 上のファイルに置いたままで、会話履歴には残りません。
+クエリ、スキーマ確認、CDP セグメント、ジャーニー、Engage、ワークフローの push / run まで、tdx が扱えるものはひととおり操作できます。API キーは利用者の PC 上のファイルに置いたままで、会話履歴には残りません。
 
-**npm（`registry.npmjs.org`）への通信許可は不要です。** Claude のセッションが通信するのは Treasure Data のドメインだけです。
-
-> **以前の `.mcpb` デスクトップ拡張版は廃止しました。** 拡張機能は Claude デスクトップアプリのチャット専用で、Cowork のセッションでは動かなかったためです。
->
-> **v1.10.0 から、セッション内で npm から tdx をインストールする方式をやめました。** 詳しくは「[セキュリティ審査向けの情報](#セキュリティ審査向けの情報)」を参照してください。
-
----
-
-## 接続方式
-
-| 方式 | 中身 | セッションの通信先 | 外部ライブラリ |
-|---|---|---|---|
-| **A. td-api.sh（既定）** | 同梱の bash スクリプト（約250行）。curl で TD の REST API を呼ぶ | `*.treasuredata.com` / `*.treasuredata.co.jp` | なし（bash / curl。python3 があれば表示を整形） |
-| **B. tdx 検証済み一式（任意）** | 公式 CLI [tdx](https://tdx.treasuredata.com/) を、管理端末で検証・固定したオフライン一式から展開 | 同上 | 約180パッケージ（lockfile で完全固定、SBOM 同梱） |
-
-ほとんどの用途は **方式A** で足ります。ジャーニーや Engage など tdx でしか扱いにくい操作が要る場合だけ、方式B を追加してください。
-
-### 方式A でできること
-
-| | コマンド |
-|---|---|
-| 認証・疎通確認 | `td-api.sh status` |
-| DB / テーブル / スキーマ | `databases` / `tables <db>` / `describe <db> <table>` |
-| クエリ（Trino / Hive） | `query <db> "<SQL>"`（参照系のみ。書き込みは明示的な許可が必要） |
-| ジョブ | `job-status <id>` / `job-result <id>` |
-| CDP | `parent-segments` / `segments <parent_segment_id>` |
-| ワークフロー | `wf-projects` / `wf-workflows <project_id>` / `wf-attempts` |
-| その他の参照 API | `get <api\|cdp\|workflow> /<path>`（GET のみ） |
+**tdx の導入方法は、お客様のネットワーク方針に合わせて選べます。** Claude が環境を診断して導入プランを提示し、選んだプランで導入・検証します。`registry.npmjs.org` を許可できない環境でも使えます。
 
 ---
 
@@ -45,47 +18,97 @@ Claude から Treasure Data を操作するプラグイン。
 
 > TDに繋ぎたい
 
-と話しかければ、Claude が作業フォルダの場所を相談し、接続まで進めます。
+と話しかけると、Claude が次の順に進めます。
+
+1. 作業フォルダの場所を相談し、API キーを置いてもらう
+2. **環境を診断し、導入プランを提示する**（お客様が選ぶ）
+3. 選ばれたプランで tdx を導入する
+4. **導入結果を検証する**（版・通信・認証・権限範囲）
+
+---
+
+## 導入プラン
+
+| プラン | 導入元 | セッションに必要な通信許可 | 向いている環境 |
+|---|---|---|---|
+| **A. npm 直接** | registry.npmjs.org（版固定） | TD ドメイン + `registry.npmjs.org` | npm の許可に問題がない |
+| **B. 社内ミラー** | お客様の npm ミラー（版固定） | TD ドメイン + ミラーのホスト | Artifactory / Nexus などの社内ミラーがある |
+| **C. オフライン一式** | 管理端末で作った一式を SHA-256 照合して展開 | **TD ドメインのみ** | npm を許可できない |
+| **D. curl のみ** | tdx を入れず、同梱の `td-api.sh` を使う | **TD ドメインのみ** | Node.js を用意できない（機能限定） |
+
+A〜C は Node.js 22.12 以上が必要です。どのプランでも、tdx は版を完全固定し、install スクリプトを実行せずに入れます。
+
+### 診断の例
+
+```
+== 環境の診断（作業フォルダ: .../TreasureAI / リージョン: ap01 / tdx 2026.9.0）
+[OK] Treasure Data に到達できる（api.treasuredata.co.jp）
+[OK] Node.js v22.22.0（22.12 以上）
+[--] 導入済みの tdx: なし
+[--] registry.npmjs.org: 到達できない、または npm が無い
+[--] 社内ミラー: 未指定（NPM_REGISTRY）
+[OK] オフライン一式: tdx-bundle-2026.9.0.tgz（SHA-256 一致）
+
+== 選べるプラン
+  A npm 直接       × registry.npmjs.org の許可が必要
+  B 社内ミラー     × NPM_REGISTRY に取得可能なミラーが必要
+  C オフライン一式 ○ 利用可
+  D curl のみ      ○ 利用可（tdx の全機能は使えない。参照・SQL・WF 参照中心）
+
+== 推奨: プラン C
+```
+
+### 検証の例
+
+```
+== 検証（プラン C / リージョン ap01）
+[OK] 到達: api.treasuredata.co.jp
+[OK] 到達: api-cdp.treasuredata.co.jp
+[OK] 到達: api-workflow.treasuredata.co.jp
+[OK] 版: tdx 2026.9.0
+[OK] 認証: 成功
+[OK] 見えるデータベース: 12 件（多すぎる場合はポリシーで絞る）
+[OK] ワークフロー API: 参照可
+
+検証結果: 合格
+```
+
+選んだプランは作業フォルダの `tdx_setup.conf` に記録され、次回以降はそれに従います。
 
 ---
 
 ## 作業フォルダ
 
-API キーと接続用スクリプトを1つのフォルダにまとめます。既定の名前は **`TreasureAI`**。
+既定の名前は **`TreasureAI`**。
 
 ```
 TreasureAI/
-├── tdx_key.txt                  1行目: API キー / 2行目: リージョン（任意、既定 us01）
-├── td-api.sh                    方式A（Claude が配置します）
-├── tdx-bundle-<ver>.tgz         方式B を使う場合のみ
-├── tdx-bundle-<ver>.tgz.sha256
-└── runtime/                     方式B の展開先（約 60MB）
+├── tdx_key.txt          1行目: API キー / 2行目: リージョン（任意、既定 us01）
+├── tdx_setup.conf       選んだプランの記録
+├── setup-tdx.sh         診断・導入・検証（Claude が配置）
+├── td-api.sh            プラン D 用（Claude が配置）
+├── tdx-bundle-*.tgz     プラン C 用の一式と .sha256
+└── runtime/             tdx 本体（約 60MB）
 ```
 
 **Claude Cowork 用のフォルダを既に接続している場合は、その中に `TreasureAI` を作ることを勧めます。** Claude がフォルダ名を確認してから作成します。
 
 ### API キーの置き方
 
-`tdx_key.txt` の1行目に API キーを書きます。
-
-```
-1234/abcdef0123456789abcdef0123456789abcdef01
-```
-
-リージョンが `us01` 以外なら、2行目にリージョン名を書きます。
+`tdx_key.txt` の1行目に API キーを書きます。リージョンが `us01` 以外なら、2行目にリージョン名を書きます。
 
 ```
 1234/abcdef0123456789abcdef0123456789abcdef01
 ap01
 ```
 
-指定できるのは `us01` / `ap01` / `eu01` / `ap02` です。`jp01` と書いた場合は `ap01` として扱われます。
+指定できるのは `us01` / `ap01` / `eu01` / `ap02` です（`jp01` は `ap01` の別名）。
 
-**キーをチャットに貼らないでください。** 会話履歴に残ります。作業フォルダが git リポジトリの中にある場合は、`.gitignore` に `tdx_key.txt`・`runtime/`・`tdx-bundle-*` を追加してください。
+**キーをチャットに貼らないでください。** 作業フォルダが git リポジトリの中にある場合は、`.gitignore` に `tdx_key.txt`・`tdx_setup.conf`・`runtime/`・`tdx-bundle-*` を追加してください。
 
 ### ネットワークを許可する
 
-Claude のネットワークアクセス設定で、許可ドメインに次を追加してください。**これ以外は不要です。**
+Claude のネットワークアクセス設定で、許可ドメインに次を追加してください。全プランで必要です。
 
 ```
 *.treasuredata.co.jp
@@ -101,13 +124,13 @@ Claude のネットワークアクセス設定で、許可ドメインに次を�
 | eu01 | `api.eu01.treasuredata.com` / `api-cdp.eu01.treasuredata.com` / `api-workflow.eu01.treasuredata.com` |
 | ap02 | `api.ap02.treasuredata.com` / `api-cdp.ap02.treasuredata.com` / `api-workflow.ap02.treasuredata.com` |
 
-Team / Enterprise では管理者設定になります。
+プラン A は `registry.npmjs.org`、プラン B はミラーのホストを追加で許可します。Team / Enterprise では管理者設定になります。
 
 ---
 
-## 方式B: tdx の検証済み一式を作る（任意）
+## プラン C: オフライン一式を作る
 
-セッションから npm に繋がずに tdx を使うための手順です。**npm に到達できる管理された端末**（または社内の npm ミラーを使える端末）で1回だけ実行します。Node.js 22.12 以上が必要です。
+npm に到達できる管理された端末（または社内ミラーを使える端末）で1回だけ実行します。Node.js 22.12 以上が必要です。
 
 ```bash
 ./scripts/build-tdx-bundle.sh 2026.9.0 ~/TreasureAI
@@ -117,61 +140,35 @@ NPM_REGISTRY=https://npm.example.co.jp/ ./scripts/build-tdx-bundle.sh 2026.9.0 ~
 
 スクリプトが行うこと:
 
-1. `@treasuredata/tdx` をバージョン完全固定で取得し、依存も `package-lock.json` で固定する
-2. install スクリプトを実行しない（`--ignore-scripts`）
-3. OS 依存のネイティブモジュール（キーチェーン連携。API キーは環境変数で渡すため不要）を除外し、純 JS の一式にする
-4. `npm audit signatures` で全パッケージのレジストリ署名を検証する。**失敗したら一式を作らない**
-5. 既知の脆弱性レポート（`npm audit`）と SBOM（CycloneDX）を出力する
-6. `tdx-bundle-<ver>.tgz` と SHA-256 を出力する
+1. `@treasuredata/tdx` を版完全固定で取得し、依存も `package-lock.json` で固定する
+2. install スクリプトを実行しない
+3. OS 依存のネイティブモジュール（キーチェーン連携。API キーは環境変数で渡すため不要）を除外し、Mac で作っても Linux のセッションで動く一式にする
+4. `npm audit signatures` で全パッケージのレジストリ署名を検証する。失敗したら一式を作らない
+5. 脆弱性レポートと SBOM（CycloneDX）を出力する
+6. `tdx-bundle-<ver>.tgz`（約 8MB）と SHA-256 を出力する
 
-出力物:
-
-| ファイル | 用途 |
+| 出力ファイル | 用途 |
 |---|---|
-| `tdx-bundle-<ver>.tgz` / `.sha256` | 作業フォルダに置く。展開前に SHA-256 を照合する |
-| `tdx-bundle-<ver>.package-lock.json` | 含まれる全パッケージとハッシュ。審査用 |
-| `tdx-bundle-<ver>.sbom.cdx.json` | SBOM（CycloneDX）。審査用 |
-| `tdx-bundle-<ver>.audit.txt` / `.signatures.txt` | 脆弱性レポートと署名検証結果。審査用 |
-
-一式を作業フォルダに置けば、Claude が SHA-256 を照合して `runtime/` に展開します。**照合に失敗した一式は展開しません。**
+| `tdx-bundle-<ver>.tgz` / `.sha256` | 作業フォルダに置く |
+| `tdx-bundle-<ver>.package-lock.json` | 含まれる全パッケージとハッシュ |
+| `tdx-bundle-<ver>.sbom.cdx.json` | SBOM |
+| `tdx-bundle-<ver>.audit.txt` / `.signatures.txt` | 脆弱性レポート / 署名検証結果 |
 
 ---
 
 ## セキュリティ審査向けの情報
 
-### npm を許可しない理由
-
-`registry.npmjs.org` を許可すると、tdx だけでなく **npm 上の任意のパッケージ**をセッションが取得できるようになります。また、以前の方式は依存パッケージのバージョンを固定しておらず、インストールのたびに推移的依存（約180パッケージ）が最新版に解決されていました。依存パッケージが乗っ取られた場合、その時点でインストールした環境に影響が及びます。
-
-v1.10.0 からは次のとおりです。
-
-| | 方式A（td-api.sh） | 方式B（tdx 一式） |
-|---|---|---|
-| セッション内のパッケージ取得 | なし | なし |
-| セッションの通信先 | TD のドメインのみ | TD のドメインのみ |
-| 実行されるコード | 本リポジトリの bash スクリプト1本（全文レビュー可） | 管理端末で署名検証・固定した一式（lockfile / SBOM で内容を確認可） |
-| 改ざん検知 | git の履歴 | 展開前に SHA-256 照合 |
-
-### td-api.sh の実装上の配慮
-
-- API キーをコマンドライン引数に載せない（`ps` で見えない）。curl にはプロセス置換経由で渡す
-- 通信は HTTPS（TLS 1.2 以上）のみ。宛先はリージョンごとの TD ホストに固定し、それ以外には送らない
-- `query` は既定で参照系 SQL（SELECT / WITH / SHOW / DESCRIBE / EXPLAIN）のみ通す。書き込み系はユーザーの了承を得たうえで `TD_ALLOW_WRITE=1` を付けたときだけ
-- `get` は GET メソッドのみ
-- 一時ファイルは権限 700 の一時ディレクトリに作り、終了時に削除する
-
-### 方式B の補足
-
-- tdx は起動時に `registry.npmjs.org` へ新バージョンの有無を問い合わせることがあります（タイムアウト 2 秒）。許可していない環境では失敗して無視されるだけで、動作に影響はありません
-- `tdx upgrade` は npm から更新を取得するため、Claude は実行しません
+- どのプランでも、tdx は**版を完全固定**し、**install スクリプトを無効**にして導入します
+- プラン C / D では、セッションは **Treasure Data のドメインにしか通信しません**
+- プラン C の一式は展開前に **SHA-256 を照合**し、一致しなければ展開しません。一式の作成時には全パッケージの**レジストリ署名を検証**し、**lockfile・SBOM・脆弱性レポート**を出力します
+- プラン D の `td-api.sh` は bash スクリプト1本（約250行）で、全文をレビューできます。API キーをコマンドライン引数に載せず、HTTPS で TD のホストにだけ送ります
+- tdx は起動時に `registry.npmjs.org` へ新しい版の有無を問い合わせることがあります（タイムアウト 2 秒）。許可していない環境では失敗して無視されるだけで、動作に影響はありません
 
 ---
 
 ## ⚠️ 権限について
 
-**実効的な権限境界は、API キーが指す Treasure Data ユーザーの権限だけ**です。td-api.sh の参照系ガードは誤操作防止であり、セキュリティ境界ではありません。
-
-本番データを変更する操作の前には Claude が確認を取りますが、それを唯一の防波堤にしないでください。
+**実効的な権限境界は、API キーが指す Treasure Data ユーザーの権限だけ**です。本番データを変更する操作（テーブルの削除・更新、セグメント・ジャーニーの変更、Engage の配信、ワークフローの push / run / delete、スケジュールの変更）の前には Claude が確認を取りますが、それを唯一の防波堤にしないでください。
 
 ### 先に Treasure Data 側を設定してください
 
@@ -180,18 +177,37 @@ v1.10.0 からは次のとおりです。
 3. そのポリシーをユーザーに割り当てる
 4. そのユーザーの **My Settings → API Keys** から API キーを取得
 
-管理者アカウントのキーをそのまま使わないでください。参照しかしないなら、TD 側で readonly のポリシーを作ってください。
+キーの権限が広いかどうかは、検証の「見えるデータベース」の件数で当たりがつきます。
 
-キーの権限が広いかどうかは `td-api.sh status` の「見えるデータベース」の件数で当たりがつきます。
-
-### Claude が実行しないコマンド（方式B）
+### Claude が実行しない tdx コマンド
 
 | コマンド | 理由 |
 |---|---|
-| `auth login` / `auth logout` / `profile` / `profiles` | 認証情報を壊す。`auth status` は参照のみなので実行します |
-| `mcp` | MCP サーバーの入れ子起動 |
-| `upgrade` | npm に繋ぎにいく。バージョンが変わり再現性も落ちる |
-| `claude` / `codex` | 対話型エージェントの起動。返らなくなる |
+| `auth login` / `auth logout` / `profile` | キーファイル方式の認証を壊す。`auth status` は実行します |
+| `claude` / `codex` / `mcp` | 対話・常駐プロセスで返らなくなる |
+| `upgrade` | `tdx_setup.conf` の版とずれる。版を上げるときはプランに沿って入れ直す |
+
+---
+
+## 手動で流す場合
+
+```bash
+cp setup-tdx.sh td-api.sh ~/TreasureAI/
+cd ~/TreasureAI
+bash setup-tdx.sh plan                          # 診断（何も変更しない）
+bash setup-tdx.sh install C                     # 導入（A / B / C / D）
+bash setup-tdx.sh verify                        # 検証
+source setup-tdx.sh && tdx --site "$TDX_SITE" databases
+```
+
+| 環境変数 | 既定 | 用途 |
+|---|---|---|
+| `TD_WORKDIR` | 自動検出 | 作業フォルダ |
+| `TDX_VERSION` | `tdx_setup.conf` / `2026.9.0` | 導入する tdx の版 |
+| `NPM_REGISTRY` | `tdx_setup.conf` / 未設定 | プラン B のミラー URL |
+| `TDX_SITE` | キーファイル2行目 / `us01` | リージョン |
+
+版を上げるときは `TDX_VERSION=<版> bash setup-tdx.sh install <プラン>` を実行します（プラン C は新しい版の一式を作って置き換える）。失敗した場合は以前の `runtime/` に自動で戻ります。
 
 ---
 
@@ -199,44 +215,21 @@ v1.10.0 からは次のとおりです。
 
 | | |
 |---|---|
-| `SKILL.md` | 作業フォルダの決定、セットアップ、コマンド実行、権限の扱い |
-| `td-api.sh` | 方式A。curl だけの TD API クライアント |
-| `setup-tdx.sh` | 方式B のセットアップを手動で流したいとき用 |
-| `scripts/build-tdx-bundle.sh` | 方式B の検証済み一式を作る（管理端末で実行） |
+| `SKILL.md` | 作業フォルダの決定、診断とプラン提示、導入、検証、コマンド実行、権限の扱い |
+| `setup-tdx.sh` | `plan` / `install` / `verify`、`source` で環境読み込み |
+| `td-api.sh` | プラン D の curl クライアント |
+| `scripts/build-tdx-bundle.sh` | プラン C の一式を作る（管理端末で実行） |
 | `references/tdx-commands.md` | tdx のコマンド早見、クエリの流儀 |
 | `references/troubleshooting.md` | 症状別の対処 |
-
----
-
-## 手動セットアップ
-
-```bash
-# 方式A
-cp td-api.sh ~/TreasureAI/ && TD_WORKDIR=~/TreasureAI ~/TreasureAI/td-api.sh status
-
-# 方式B（一式を ~/TreasureAI に置いたうえで）
-TD_WORKDIR=~/TreasureAI source ./setup-tdx.sh
-```
-
-`setup-tdx.sh` は npm に繋ぎません。一式が無い場合は何もインストールせず、方式A を案内して終わります。社内 npm ミラーなど許可された経路から入れる場合に限り、`TDX_ALLOW_NPM=1`（必要なら `NPM_REGISTRY=<URL>`）を明示してください。その場合もバージョン完全固定・install スクリプト無効で入れます。
-
-| 環境変数 | 既定 | 用途 |
-|---|---|---|
-| `TD_WORKDIR` | 自動検出 | 作業フォルダ |
-| `TDX_SITE` | キーファイル2行目 / `us01` | リージョン |
-| `TD_MAX_ROWS` | `200` | td-api.sh の表示行数 |
-| `TD_ALLOW_WRITE` | 未設定 | td-api.sh で書き込み系 SQL を許可 |
-| `TDX_VERSION` | `2026.9.0` | 方式B の tdx バージョン |
-| `TDX_ALLOW_NPM` | 未設定 | 方式B で npm からの取得を許可（非推奨） |
 
 ---
 
 ## 既知の制限
 
 - **フォルダ接続は毎回必要です。** Claude のセッションはタスクごとに許可が要ります
-- 方式A は参照系が中心です。ジャーニーの編集や Engage の配信などは方式B か TD コンソールを使ってください
-- 1コマンドの実行時間には上限があります。重いクエリは `query` が返すジョブ ID で `job-status` → `job-result` に分けてください
-- 作業フォルダが iCloud や Dropbox の同期対象にあると、方式B の `runtime/`（約 60MB）が同期されます
+- プラン D は参照・SQL・ワークフロー参照が中心です。ジャーニーや Engage、ワークフローの push / run は A〜C を使ってください
+- 1コマンドの実行時間には上限があります。重いクエリは `job submit` → `job status` に分けてください
+- 作業フォルダが iCloud や Dropbox の同期対象にあると、`runtime/`（約 60MB）が同期されます
 
 ---
 
