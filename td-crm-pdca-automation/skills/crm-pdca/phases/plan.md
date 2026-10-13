@@ -135,6 +135,7 @@
 ### 【CR】
 - 訴求軸・コピー・ビジュアル仕様
 - A/Bテスト設計
+- Engage Studio の既存アセットURLが渡された場合、URLをブラウザで開けないだけで諦めず、[`../personas/creative-planner.md`](../personas/creative-planner.md) の「Engage Studio のアセットURLにアクセス・更新する場合」に従い、URLのWorkspace/Template IDを `tdx engage` で照合する
 - 成果物: `01_plan/creative_spec.md`
 
 **並行作業中は、PMが双方の整合性（セグメント特徴とコピーが噛み合っているか）をチェック**
@@ -169,7 +170,7 @@
 
 ## ステップ7: 【CR/施策】配信ツールでコンテンツ ファイナライズ
 
-- 配信前チェックリスト（`personas/creative-planner.md`）を全項目クリア
+- 配信前チェックリスト（[`../personas/creative-planner.md`](../personas/creative-planner.md)）を全項目クリア
 - モバイル・PC表示確認
 - テスト配信（自分宛）
 

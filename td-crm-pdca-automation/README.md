@@ -57,6 +57,8 @@ AIが `SKILL.md`（セットアップ手順）を読み込み、次の流れで�
 
 各ペルソナの業務範囲（`full_auto` / `consult` / `human_led`）はプロジェクトごとに決めます。
 
+Engage Studio の既存アセットURLをブラウザから開けない場合は、【CR】がURLのWorkspace/Template IDを `tdx engage` で照合し、テンプレートをpullして確認します。詳細は `skills/crm-pdca/personas/creative-planner.md` を参照してください。テンプレート更新とキャンペーン配信は別操作で、それぞれ明示承認が必要です。
+
 ### スキップできない4つの承認ポイント
 
 1. 施策方向性の確定

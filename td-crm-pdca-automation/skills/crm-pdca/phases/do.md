@@ -23,6 +23,7 @@
 - [ ] 配信許諾のある顧客だけになっているか
 - [ ] 配信上限（`defaults.frequency_cap`）を超える顧客がいないか
 - [ ] クリエイティブのリンク切れ無し
+- [ ] Engage Studio のアセットURLがある場合、URLのWorkspace/Template IDとpullしたテンプレートを照合し、意図したHTML・画像の最新版を確認したか（手順は [`../personas/creative-planner.md`](../personas/creative-planner.md)）
 - [ ] 差し込みフィールドのダミー値が残ってないか
 - [ ] コントロール群設定
 - [ ] 配信時刻・曜日が妥当か（`defaults.avoid_send_windows` を避ける）
@@ -40,7 +41,7 @@ PMがクライアントに即エスカレーション。配信を止めるか、
 
 ### 配信ツールでの配信
 `delivery.tools` に設定された配信ツールで実行する。
-- Engage Studio: 設定済みの Workspace（`delivery.engage_workspace`）で配信
+- Engage Studio: 設定済みの Workspace（`delivery.engage_workspace`）で配信。既存アセットURLの解決・pull・更新は [`../personas/creative-planner.md`](../personas/creative-planner.md) の手順に従う。テンプレートのpushとキャンペーン配信は別操作として扱い、それぞれ承認を得る。
 - CJO: ジャーニー配信の場合は CJO 側で起動（`related_skills.cjo` 参照）
 - 外部ツール: 利用者が実行し、配信数・ジョブIDなどを共有してもらう
 
