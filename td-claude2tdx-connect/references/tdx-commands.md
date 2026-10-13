@@ -1,5 +1,7 @@
 # tdx コマンド early reference
 
+> 方式B（tdx 検証済み一式）を使う場合のリファレンス。既定の方式A（`td-api.sh`）のコマンドは SKILL.md の Step 4 を参照。
+
 すべて `tdx --site "$TDX_SITE" <以下>` の形で実行する。出力を構造化したいときは `--json` / `--jsonl` / `--tsv` を付ける。表として読むなら `--table`。
 
 ## データ

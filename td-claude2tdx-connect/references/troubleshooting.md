@@ -21,7 +21,11 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 15 https://api.treasuredata.
 
 Team / Enterprise では管理者設定。個人アカウントでは設定画面のネットワークアクセス項目。
 
-**npm registry は既定で許可されている。** そのため tdx のインストールだけは成功し、「入ったのに認証で落ちる」という形で表面化する。インストールが通ったことを根拠にネットワークは大丈夫だと判断しない。
+**`registry.npmjs.org` の許可は不要。** このプラグインはセッションから npm に繋がない。ユーザーや管理者に npm の許可を求めない。
+
+### `registry.npmjs.org` を許可できないと言われた
+
+許可しなくてよい。既定の方式A（`td-api.sh`）は curl だけで動き、TD のドメインにしか通信しない。tdx が必要なら、管理端末で `scripts/build-tdx-bundle.sh` を実行して検証済み一式を作ってもらう（README の「方式B」）。
 
 ## 認証
 
@@ -55,13 +59,17 @@ export PATH="<WORKDIR>/runtime/bin:$PATH"
 
 runtime は接続フォルダの中にあるので消えていない。まず PATH を疑う。
 
-### `npm error code: 'EACCES'`
+### `SHA-256 が一致しません`
 
-`--prefix` を付け忘れて `/usr` に入れようとしている。作業フォルダを指定する。
+一式が転送中に壊れたか、改変されている。**展開しない。** 管理端末で `build-tdx-bundle.sh` を実行し直し、`.tgz` と `.sha256` を両方置き直してもらう。
 
-```bash
-npm i -g --prefix "<WORKDIR>/runtime" @treasuredata/tdx
-```
+### `署名検証に失敗しました`（build-tdx-bundle.sh）
+
+管理端末から `registry.npmjs.org` と `tuf-repo-cdn.sigstore.dev` に到達できる必要がある。社内ミラーで署名検証が通らない場合は、ミラーの管理者に署名の扱いを確認する。`SKIP_SIGNATURE_CHECK=1` で省略できるが、審査に出す一式には使わない。
+
+### td-api.sh: `参照系以外の SQL は既定で止めています`
+
+書き込み系の SQL と判定された。本当に実行する必要があるならユーザーに確認を取り、了承を得てから `TD_ALLOW_WRITE=1` を付けて再実行する。文字列リテラルの中の単語（`'DELETE'` など）で誤判定されることがあるが、その場合も同じ手順。
 
 ### runtime が見つからない
 
@@ -88,7 +96,7 @@ find "$HOME/mnt" -maxdepth 5 -path '*/runtime/bin/tdx' 2>/dev/null
 
 ### `tdx upgrade` を実行してよいか
 
-しない。バージョンが変わると挙動が変わり、再現性が落ちる。バージョンを上げたい場合はユーザーに相談してから `npm i -g @treasuredata/tdx@<version>` を使う。
+しない。npm に繋ぎにいくうえ、バージョンが変わると再現性が落ちる。バージョンを上げたい場合は、管理端末で新しいバージョンの一式を作ってもらう。
 
 ## ファイル
 
@@ -104,4 +112,4 @@ Finder は `.` で始まるファイルを表示しない。`tdx_key.txt` のよ
 
 既定は `TreasureAI`。Claude Cowork 用のフォルダを既に接続しているなら、その中にサブフォルダとして作る。既存フォルダの直下にキーファイルや `runtime/` を置かない。
 
-iCloud や Dropbox の同期対象は避ける。`runtime/` は約 60MB あり、同期の無駄になる。
+iCloud や Dropbox の同期対象は避ける。方式B の `runtime/` は約 60MB あり、同期の無駄になる。

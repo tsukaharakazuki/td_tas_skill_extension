@@ -5,13 +5,13 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.9.0",
+    "version": "1.10.0",
     "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, and CRM PDCA automation"
   },
   "plugins": [
     {
       "name": "td-claude2tdx-connect",
-      "description": "Use when the user wants to query or operate Treasure Data from Claude — running SQL, listing databases and tables, checking schemas, CDP segments, journeys, Engage, workflows, jobs, or schedules — and immediately after this plugin is installed, to set up the connection. Installs the tdx CLI into the session and authenticates with a key file on the user's computer. Triggers on phrases like 'TDに繋ぎたい', 'TDのDBを教えて', 'TDでクエリして', 'テーブルの中身見せて', 'セグメントを確認して', 'ワークフロー流して', 'TDのセットアップして', 'query Treasure Data', 'connect Claude to Treasure Data'.",
+      "description": "Use when the user wants to query or operate Treasure Data from Claude — running SQL, listing databases and tables, checking schemas, CDP segments, journeys, Engage, workflows, jobs, or schedules — and immediately after this plugin is installed, to set up the connection. Connects with a bundled curl-only client (no npm access needed; only *.treasuredata.com / *.treasuredata.co.jp), or optionally a pre-verified offline tdx bundle, authenticating with a key file on the user's computer. Triggers on phrases like 'TDに繋ぎたい', 'TDのDBを教えて', 'TDでクエリして', 'テーブルの中身見せて', 'セグメントを確認して', 'ワークフロー流して', 'TDのセットアップして', 'query Treasure Data', 'connect Claude to Treasure Data'.",
       "source": "./",
       "strict": false,
       "skills": [
