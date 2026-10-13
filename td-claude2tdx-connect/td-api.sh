@@ -26,8 +26,12 @@
 # 安全上の決まり:
 #   - API キーはコマンドライン引数に載せない（ps で見えない）。curl には -K でプロセス置換経由で渡す
 #   - 通信は https のみ。宛先はリージョンごとの *.treasuredata.com / *.treasuredata.co.jp に固定
-#   - query は既定で参照系 SQL（SELECT / WITH / SHOW / DESCRIBE / EXPLAIN）のみ通す。
-#     書き込み系を流すときは、ユーザーの明示的な了承を得たうえで TD_ALLOW_WRITE=1 を付ける
+#   - 作業フォルダの tdx_policy.conf（setup-tdx.sh policy set で作る）の操作範囲に従う。
+#     data / workflow / cdp の水準（none / read / write）を見て、範囲外の操作は実行しない。
+#     ポリシーファイルが無い場合は status 以外を拒否する
+#   - 書き込み系 SQL は data=write かつ TD_ALLOW_WRITE=1（ユーザーの了承を得た印）のときだけ通す
+#   - 判定結果は tdx_audit.log に残す
+#   - --check <コマンド...> で判定だけ表示する（実行しない）
 
 set -uo pipefail
 
@@ -35,6 +39,9 @@ die() { echo "error: $*" >&2; exit 1; }
 
 # ---------- 認証情報 ----------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+CHECK_ONLY=0
+[ "${1:-}" = "--check" ] && { CHECK_ONLY=1; shift; }
+if [ -z "${TD_WORKDIR:-}" ] && [ -f "$SCRIPT_DIR/tdx_policy.conf" ]; then TD_WORKDIR="$SCRIPT_DIR"; fi
 if [ -z "${TDX_API_KEY:-}" ]; then
   if [ -z "${TD_WORKDIR:-}" ]; then
     if [ -s "$SCRIPT_DIR/tdx_key.txt" ]; then
@@ -173,6 +180,38 @@ b = io.StringIO(); csv.writer(b).writerow([c[0] for c in cols]); print(b.getvalu
 
 # ---------- コマンド ----------
 cmd="${1:-help}"; shift || true
+
+# ---------- 操作範囲の判定 ----------
+POLICY="${TD_WORKDIR:-$SCRIPT_DIR}/tdx_policy.conf"
+pol() {
+  local v=""; [ -f "$POLICY" ] && v="$(sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*\([a-z]*\).*/\1/p" "$POLICY" | tail -1)"
+  case "$v" in read|write) echo "$v" ;; *) echo none ;; esac
+}
+rank() { case "$1" in write) echo 2 ;; read) echo 1 ;; *) echo 0 ;; esac; }
+CAT=""; LVL=read
+case "$cmd" in
+  status|help|-h|--help) CAT=always ;;
+  databases|tables|describe|job-status|job-result) CAT=data ;;
+  query) CAT=data; printf '%s' "${2:-}" | is_readonly_sql || LVL=write ;;
+  parent-segments|segments) CAT=cdp ;;
+  wf-projects|wf-workflows|wf-attempts) CAT=workflow ;;
+  get) case "${1:-}" in api) CAT=data ;; cdp) CAT=cdp ;; workflow) CAT=workflow ;; *) CAT=always ;; esac ;;
+  *) CAT=always ;;   # 不明なコマンドは下の case で弾かれる
+esac
+DECISION=allow; REASON=""
+if [ "$CAT" != always ]; then
+  if [ ! -f "$POLICY" ]; then DECISION=deny; REASON="tdx_policy.conf がありません。setup-tdx.sh policy で操作範囲を設定してください"
+  elif [ "$(rank "$(pol "$CAT")")" -lt "$(rank "$LVL")" ]; then DECISION=deny; REASON="操作範囲外: $CAT は '$(pol "$CAT")' まで（この操作は $LVL）"
+  elif [ "$LVL" = write ] && [ "${TD_ALLOW_WRITE:-0}" != 1 ]; then DECISION=deny; REASON="書き込み操作です。ユーザーの了承を得てから TD_ALLOW_WRITE=1 を付けて再実行してください"
+  fi
+fi
+if [ $CHECK_ONLY = 1 ]; then printf '%s\t%s/%s\t%s\n' "$DECISION" "$CAT" "$LVL" "$REASON"; [ "$DECISION" = allow ]; exit $?; fi
+if [ "$CAT" != always ]; then
+  printf '%s\t%s\t%s/%s\ttd-api.sh %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$DECISION" "$CAT" "$LVL" \
+    "$(printf '%s ' "$cmd" "$@" | tr '\n' ' ' | cut -c1-500)" >> "${TD_WORKDIR:-$SCRIPT_DIR}/tdx_audit.log" 2>/dev/null
+fi
+[ "$DECISION" = allow ] || die "$REASON"
+
 case "$cmd" in
   status)
     echo "site: $TDX_SITE ($API)"
@@ -200,9 +239,6 @@ case "$cmd" in
       esac
     done
     case "$engine" in presto|trino) engine=presto ;; hive) ;; *) die "engine は presto か hive" ;; esac
-    if [ "${TD_ALLOW_WRITE:-0}" != 1 ] && ! printf '%s' "$sql" | is_readonly_sql; then
-      die "参照系以外の SQL は既定で止めています。ユーザーの了承を得たうえで TD_ALLOW_WRITE=1 を付けて再実行してください"
-    fi
     printf '%s' "$sql" > "$TMPD/sql"
     resp="$(call POST "$API" "/v3/job/issue/$engine/$db" --data-urlencode "query@$TMPD/sql")" || exit 1
     id="$(printf '%s' "$resp" | grep -oE '"job_id" *: *"?[0-9]+' | grep -oE '[0-9]+$')"

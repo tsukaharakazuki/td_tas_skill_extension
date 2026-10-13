@@ -3,6 +3,10 @@
 #
 #   bash setup-tdx.sh plan                 環境を診断し、選べるプランと推奨を表示する（何も変更しない）
 #   bash setup-tdx.sh install <A|B|C|D>    選んだプランで導入し、tdx_setup.conf に記録する
+#   bash setup-tdx.sh policy presets       操作範囲のプリセット一覧
+#   bash setup-tdx.sh policy set <プリセット> [カテゴリ=水準 ...]
+#                                          操作範囲を tdx_policy.conf に書く（例: policy set analyst workflow=read）
+#   bash setup-tdx.sh policy show          現在の操作範囲と、TD 側で合わせるべき設定を表示
 #   bash setup-tdx.sh verify               導入結果を検証する（版・通信・認証・権限範囲）
 #   source setup-tdx.sh                    記録済みの設定で PATH と認証情報を読み込む
 #
@@ -15,6 +19,9 @@
 # 作業フォルダ（TD_WORKDIR。未指定ならスクリプトと同階層 → $HOME/mnt 配下の tdx_key.txt から探す）:
 #   tdx_key.txt          1行目: APIキー / 2行目: リージョン（任意、既定 us01）
 #   tdx_setup.conf       選んだプランの記録（install が書く。お客様の設定として残る）
+#   tdx_policy.conf      操作範囲の記録（policy set が書く）。tdx-guard.sh がこれを強制する
+#   tdx-guard.sh         操作範囲のガード。install が runtime/bin/tdx をこのガード経由にする
+#   tdx_audit.log        ガードの判定ログ
 #   tdx-bundle-*.tgz     プラン C の一式と .sha256
 #   runtime/             tdx の導入先
 #   td-api.sh            プラン D 用
@@ -200,10 +207,140 @@ cmd_install() {
       chmod +x "$TD_WORKDIR/td-api.sh"
       ;;
   esac
+  if [ "$mode" != D ]; then
+    _install_guard || { _rollback "ガードの組み込みに失敗しました"; return 1; }
+  fi
   rm -rf "$TD_WORKDIR/runtime.old"
   _write_conf "$mode"
   _ok "プラン $mode で導入し、tdx_setup.conf に記録しました"
+  [ -f "$TD_WORKDIR/tdx_policy.conf" ] || _say "操作範囲が未設定です。tdx は status 以外すべて拒否されます: bash setup-tdx.sh policy set <プリセット>"
   _say "続けて検証: bash setup-tdx.sh verify"
+}
+
+# runtime/bin/tdx を tdx-guard.sh 経由に差し替える
+_install_guard() {
+  [ -f "$TD_WORKDIR/tdx-guard.sh" ] || { _ng "tdx-guard.sh を作業フォルダに置いてください"; return 1; }
+  chmod +x "$TD_WORKDIR/tdx-guard.sh"
+  mkdir -p "$TD_WORKDIR/runtime/bin"
+  rm -f "$TD_WORKDIR/runtime/bin/tdx"
+  cat > "$TD_WORKDIR/runtime/bin/tdx" <<'SHIM'
+#!/usr/bin/env bash
+# tdx-guard 経由で tdx を実行する（setup-tdx.sh install が生成）
+D="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TD_WORKDIR="$D" exec bash "$D/tdx-guard.sh" "$@"
+SHIM
+  chmod +x "$TD_WORKDIR/runtime/bin/tdx"
+  _ok "tdx を操作範囲ガード（tdx-guard.sh）経由にしました"
+}
+
+# ---------- policy ----------
+POLICY_CATS="data workflow cdp journey engage ai admin"
+_cat_label() {
+  case "$1" in
+    data) echo "データ・SQL（DB/テーブル参照、クエリ、ジョブ）" ;;
+    workflow) echo "ワークフロー（push / run / スケジュール / シークレット）" ;;
+    cdp) echo "CDP（親セグメント、セグメント、アクティベーション、CAS）" ;;
+    journey) echo "ジャーニー" ;;
+    engage) echo "Engage・配信（キャンペーン、テンプレート、送信）" ;;
+    ai) echo "AI（LLM エージェント、チャット）" ;;
+    admin) echo "管理（ユーザー、ポリシー）" ;;
+  esac
+}
+_lvl_label() { case "$1" in write) echo "参照・更新" ;; read) echo "参照のみ" ;; *) echo "不可" ;; esac; }
+
+_preset() {  # 出力: "data=.. workflow=.. ..."
+  case "$1" in
+    readonly)  echo "data=read  workflow=read  cdp=read  journey=read  engage=read  ai=none  admin=none" ;;
+    analyst)   echo "data=write workflow=read  cdp=read  journey=read  engage=read  ai=none  admin=none" ;;
+    wf-ops)    echo "data=write workflow=write cdp=read  journey=read  engage=read  ai=none  admin=none" ;;
+    marketing) echo "data=read  workflow=read  cdp=write journey=write engage=write ai=none  admin=none" ;;
+    full)      echo "data=write workflow=write cdp=write journey=write engage=write ai=write admin=read" ;;
+    none)      echo "data=none  workflow=none  cdp=none  journey=none  engage=none  ai=none  admin=none" ;;
+    *) return 1 ;;
+  esac
+}
+
+cmd_policy_presets() {
+  _say "| プリセット | 用途 | データ・SQL | ワークフロー | CDP | ジャーニー | Engage | AI | 管理 |"
+  _say "|---|---|---|---|---|---|---|---|---|"
+  local p desc kv line
+  for p in readonly analyst wf-ops marketing full; do
+    case "$p" in
+      readonly)  desc="参照のみ（SQL は SELECT 系だけ）" ;;
+      analyst)   desc="分析（書き込み SQL 可、WF は参照のみ）" ;;
+      wf-ops)    desc="分析＋ワークフロー運用" ;;
+      marketing) desc="施策運用（セグメント・ジャーニー・Engage を更新）" ;;
+      full)      desc="ほぼ全権（管理は参照のみ）" ;;
+    esac
+    line="| $p | $desc |"
+    for kv in $(_preset "$p"); do line+=" $(_lvl_label "${kv#*=}") |"; done
+    _say "$line"
+  done
+  _say ""
+  _say "個別に変えるとき: policy set analyst workflow=none cdp=none"
+}
+
+cmd_policy_set() {
+  local base="${1:-}"; shift || true
+  local spec; spec="$(_preset "$base")" || { _ng "不明なプリセット: '$base'（readonly / analyst / wf-ops / marketing / full / none）"; return 1; }
+  local kv k v
+  for kv in "$@"; do
+    k="${kv%%=*}"; v="${kv#*=}"
+    case " $POLICY_CATS " in *" $k "*) ;; *) _ng "不明なカテゴリ: $k（$POLICY_CATS）"; return 1 ;; esac
+    case "$v" in none|read|write) ;; *) _ng "不明な水準: $v（none / read / write）"; return 1 ;; esac
+    [ "$k" = admin ] && [ "$v" = write ] && { _ng "admin は read までです"; return 1; }
+    spec="$(printf '%s\n' $spec | sed "s/^$k=.*/$k=$v/" | tr '\n' ' ')"
+  done
+  {
+    echo "# td-claude2tdx-connect の操作範囲（setup-tdx.sh policy set が書き込む）"
+    echo "# none = 不可 / read = 参照のみ / write = 参照・更新（更新は都度の了承が必要）"
+    echo "# preset: $base${*:+ / 変更: $*}"
+    echo "# updated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf '%s\n' $spec
+  } > "$TD_WORKDIR/tdx_policy.conf"
+  _ok "操作範囲を tdx_policy.conf に記録しました"
+  cmd_policy_show
+}
+
+_pol_get() { sed -n "s/^$1=\([a-z]*\).*/\1/p" "$TD_WORKDIR/tdx_policy.conf" 2>/dev/null | tail -1; }
+
+cmd_policy_show() {
+  [ -f "$TD_WORKDIR/tdx_policy.conf" ] || { _na "操作範囲: 未設定（tdx は status 以外すべて拒否）"; return 1; }
+  _say "== 操作範囲（tdx_policy.conf）"
+  _say "| 項目 | 設定 |"
+  _say "|---|---|"
+  local c
+  for c in $POLICY_CATS; do _say "| $(_cat_label "$c") | $(_lvl_label "$(_pol_get "$c")") |"; done
+  _say ""
+  _say "== Treasure Data 側で合わせる設定（API キーのユーザーのポリシー）"
+  _say "クライアント側の制限は誤操作防止です。同じ範囲を TD の Policies でも設定してください（項目名はコンソールの表示に合わせて読み替え）。"
+  case "$(_pol_get data)" in
+    write) _say "- データベース: 対象 DB に限定してフルアクセス（書き込み SQL を使うため）" ;;
+    read)  _say "- データベース: 対象 DB に限定して Query Only（参照のみ）" ;;
+    *)     _say "- データベース: 権限を付与しない" ;;
+  esac
+  case "$(_pol_get workflow)" in
+    write) _say "- ワークフロー: 対象プロジェクトの編集・実行を許可" ;;
+    read)  _say "- ワークフロー: 参照（View）のみ" ;;
+    *)     _say "- ワークフロー: 権限を付与しない" ;;
+  esac
+  local c2
+  for c2 in cdp journey engage; do
+    case "$(_pol_get $c2)" in
+      write) _say "- $(_cat_label $c2): 対象の親セグメント / ワークスペースで編集を許可" ;;
+      read)  _say "- $(_cat_label $c2): 参照のみ" ;;
+      *)     _say "- $(_cat_label $c2): 権限を付与しない" ;;
+    esac
+  done
+}
+
+cmd_policy() {
+  case "${1:-show}" in
+    presets) cmd_policy_presets ;;
+    set) shift; cmd_policy_set "$@" ;;
+    show) cmd_policy_show ;;
+    *) _say "usage: setup-tdx.sh policy presets | set <プリセット> [カテゴリ=水準 ...] | show"; return 1 ;;
+  esac
 }
 
 # ---------- verify ----------
@@ -236,18 +373,67 @@ cmd_verify() {
     if tdx --site "$SITE" auth status >/dev/null 2>&1; then _ok "認証: 成功"
     else _ng "認証: 失敗（キー / リージョンを確認。tdx --site $SITE auth status で詳細）"; fail=1; fi
 
-    # 4. 権限範囲（参照のみで確認）
+    # 4. 権限範囲（参照のみで確認。操作範囲で不可のものは確認しない）
     local n
-    n="$(tdx --site "$SITE" databases --json 2>/dev/null | grep -o '"name"' | wc -l | tr -d ' ')"
-    if [ "${n:-0}" -gt 0 ]; then _ok "見えるデータベース: $n 件（多すぎる場合はポリシーで絞る）"
-    else _ng "データベースが1件も見えない（権限かリージョンを確認）"; fail=1; fi
-    if tdx --site "$SITE" wf projects >/dev/null 2>&1; then _ok "ワークフロー API: 参照可"
-    else _ng "ワークフロー API: 参照できない"; fail=1; fi
+    if [ "$(_pol_get data)" = read ] || [ "$(_pol_get data)" = write ]; then
+      n="$(tdx --site "$SITE" databases --json 2>/dev/null | grep -o '"name"' | wc -l | tr -d ' ')"
+      if [ "${n:-0}" -gt 0 ]; then _ok "見えるデータベース: $n 件（多すぎる場合は TD のポリシーで絞る）"
+      else _ng "データベースが1件も見えない（権限かリージョンを確認）"; fail=1; fi
+    else _na "データベース: 操作範囲で不可のため確認しない"; fi
+    if [ "$(_pol_get workflow)" = read ] || [ "$(_pol_get workflow)" = write ]; then
+      if tdx --site "$SITE" wf projects >/dev/null 2>&1; then _ok "ワークフロー API: 参照可"
+      else _ng "ワークフロー API: 参照できない"; fail=1; fi
+    else _na "ワークフロー: 操作範囲で不可のため確認しない"; fi
+  fi
+
+  # 5. 操作範囲の強制
+  if [ ! -f "$TD_WORKDIR/tdx_policy.conf" ]; then
+    _ng "操作範囲が未設定（policy set を実行）"; fail=1
+  else
+    if [ "$mode" != D ]; then
+      if grep -q 'tdx-guard.sh' "$TD_WORKDIR/runtime/bin/tdx" 2>/dev/null && [ -f "$TD_WORKDIR/tdx-guard.sh" ]; then
+        _ok "ガード: runtime/bin/tdx は tdx-guard.sh 経由"
+      else _ng "ガード: runtime/bin/tdx がガードを経由していない（install をやり直す）"; fail=1; fi
+    fi
+    # 各カテゴリの代表操作で、ガードが設定どおりに判定するか
+    local probe exp got cat rd wr chk
+    local pfail=0
+    for cat in data workflow cdp journey engage; do
+      case "$cat" in
+        data)     rd="query select 1";             wr="query insert into t select 1" ;;
+        workflow) rd="wf projects";                wr="wf push ." ;;
+        cdp)      rd="segments";                   wr="sg push" ;;
+        journey)  rd="journeys";                   wr="journey push" ;;
+        engage)   rd="engage campaigns";           wr="engage campaign launch x" ;;
+      esac
+      local lv; lv="$(_pol_get $cat)"; lv="${lv:-none}"
+      for probe in read write; do
+        [ $probe = read ] && chk="$rd" || chk="$wr"
+        exp=deny
+        { [ $probe = read ] && [ "$lv" != none ]; } && exp=allow
+        { [ $probe = write ] && [ "$lv" = write ]; } && exp=allow
+        if [ "$mode" = D ]; then got="$(_tdapi_check $cat $probe)"
+        else got="$(TD_ALLOW_WRITE=1 TD_WORKDIR="$TD_WORKDIR" bash "$TD_WORKDIR/tdx-guard.sh" --check $chk | cut -f1)"; fi
+        [ -z "$got" ] && continue
+        if [ "$got" != "$exp" ]; then _ng "ガード判定: $cat/$probe が $got（期待 $exp）"; pfail=1; fail=1; fi
+      done
+    done
+    [ $pfail = 0 ] && _ok "ガード判定: 操作範囲どおり（$(for c in $POLICY_CATS; do printf '%s=%s ' $c "$(_pol_get $c)"; done)）"
   fi
 
   _say ""
   if [ $fail = 0 ]; then _say "検証結果: 合格"; _say "VERIFY=PASS"; return 0
   else _say "検証結果: 不合格（[NG] の項目を確認）"; _say "VERIFY=FAIL"; return 1; fi
+}
+
+_tdapi_check() {  # プラン D: td-api.sh の判定（未対応カテゴリは空）
+  local cmd
+  case "$1/$2" in
+    data/read) cmd="query db 'select 1'" ;; data/write) cmd="query db 'insert into t select 1'" ;;
+    workflow/read) cmd="wf-projects" ;; cdp/read) cmd="parent-segments" ;;
+    *) return 0 ;;
+  esac
+  TD_ALLOW_WRITE=1 TD_WORKDIR="$TD_WORKDIR" eval "\"$TD_WORKDIR/td-api.sh\" --check $cmd" 2>/dev/null | cut -f1
 }
 
 # ---------- main ----------
@@ -264,6 +450,7 @@ if [ $_SETUP_SOURCED = 1 ]; then
   export PATH="$TD_WORKDIR/runtime/bin:$PATH"
   _load_key
   _say "workdir: $TD_WORKDIR / plan: ${CONF_MODE:-未設定} / site: $SITE"
+  _say "policy: $( [ -f "$TD_WORKDIR/tdx_policy.conf" ] && for c in $POLICY_CATS; do printf '%s=%s ' $c "$(_pol_get $c)"; done || echo 未設定)"
   command -v tdx >/dev/null 2>&1 && tdx --version 2>/dev/null | head -1
   return 0
 fi
@@ -272,5 +459,6 @@ case "${1:-plan}" in
   plan)    cmd_plan ;;
   install) shift; cmd_install "$@" ;;
   verify)  cmd_verify ;;
-  *) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  policy)  shift; cmd_policy "$@" ;;
+  *) sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
