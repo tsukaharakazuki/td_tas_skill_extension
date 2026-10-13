@@ -458,7 +458,12 @@ if [ $_SETUP_SOURCED = 1 ]; then
   export PATH="$TD_WORKDIR/runtime/bin:$PATH"
   _load_key
   _say "workdir: $TD_WORKDIR / plan: ${CONF_MODE:-未設定} / site: $SITE"
-  _say "policy: $( [ -f "$TD_WORKDIR/tdx_policy.conf" ] && for c in $POLICY_CATS; do printf '%s=%s ' $c "$(_pol_get $c)"; done || echo 未設定)"
+  # zsh から source されても動くよう、単語分割に頼らず列挙する
+  if [ -f "$TD_WORKDIR/tdx_policy.conf" ]; then
+    _say "policy: data=$(_pol_get data) workflow=$(_pol_get workflow) cdp=$(_pol_get cdp) journey=$(_pol_get journey) engage=$(_pol_get engage) ai=$(_pol_get ai) admin=$(_pol_get admin)"
+  else
+    _say "policy: 未設定（tdx は status 以外すべて拒否）"
+  fi
   command -v tdx >/dev/null 2>&1 && tdx --version 2>/dev/null | head -1
   return 0
 fi

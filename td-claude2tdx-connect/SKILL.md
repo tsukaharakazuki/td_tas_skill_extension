@@ -218,6 +218,7 @@ TD_ALLOW_WRITE=1 tdx --site "$TDX_SITE" wf push ./project
 
 - **キーの中身を表示しない。** `cat tdx_key.txt` や `echo $TDX_API_KEY` を実行しない
 - 対話入力を求めるコマンド（引数なしの `wf run` など）は、引数を明示して実行する
+- tdx が `Update available ... Run: tdx upgrade` と表示しても無視する。`upgrade` はガードが止める。版を上げるのはユーザーが求めたときに Step 5 で行う
 - ユーザーから「何をしたか確認したい」と言われたら `tdx_audit.log` を見せる
 
 ---
