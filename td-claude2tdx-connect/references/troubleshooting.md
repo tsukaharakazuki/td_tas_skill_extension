@@ -21,7 +21,63 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 15 https://api.treasuredata.
 
 Team / Enterprise では管理者設定。個人アカウントでは設定画面のネットワークアクセス項目。
 
-**npm registry は既定で許可されている。** そのため tdx のインストールだけは成功し、「入ったのに認証で落ちる」という形で表面化する。インストールが通ったことを根拠にネットワークは大丈夫だと判断しない。
+`registry.npmjs.org` が必要なのはプラン A だけ。お客様が許可できない場合に許可を求めない。
+
+### `registry.npmjs.org` を許可できないと言われた
+
+許可しなくてよい。`setup-tdx.sh plan` を再実行し、次から選んでもらう。
+
+- 社内ミラーがある → プラン B（`NPM_REGISTRY=<URL>` を付けて plan）
+- ミラーが無い → プラン C（管理端末で `scripts/build-tdx-bundle.sh` を実行し、一式を作業フォルダに置く）
+- Node.js も用意できない → プラン D（`td-api.sh`、機能限定）
+
+### 社内ミラーで `取得できない`（プラン B）
+
+順に疑う。
+
+1. ミラーのホストがネットワーク許可に入っていない
+2. 認証が要るミラーで `.npmrc` の設定が無い（ミラー管理者に確認）
+3. ミラーに指定の版が同期されていない（`TDX_VERSION` を同期済みの版にするか、ミラー側で取り込んでもらう）
+
+## 検証（setup-tdx.sh verify）の [NG]
+
+| 項目 | 対処 |
+|---|---|
+| 到達できない: api-cdp / api-workflow | 許可が `api.` だけになっている。`*.treasuredata.com` / `*.treasuredata.co.jp` か各ホストを追加 |
+| 版が期待と違う | `tdx upgrade` などで版がずれた。Step 4 で入れ直す |
+| 認証: 失敗 | 下の「認証」を参照 |
+| データベースが1件も見えない | キーのユーザーにポリシーが割り当てられていないか、リージョン違い |
+| ワークフロー API: 参照できない | ポリシーでワークフロー権限が無い。必要ならユーザーの権限を見直してもらう |
+
+## 操作範囲のガード
+
+### `tdx-guard: 実行しませんでした — 操作範囲外: ...`
+
+お客様が決めた操作範囲では許可されていない操作。ユーザーにそう伝える。**回避しない**（tdx 本体を直接叩く、`tdx_policy.conf` / `tdx-guard.sh` を書き換える、td-api.sh で代替する、をしない）。範囲を広げるのは、ユーザーが明示的に求めたときに `setup-tdx.sh policy set` で行う。
+
+### `書き込み操作です。... TD_ALLOW_WRITE=1 を付けて`
+
+操作範囲では許可されているが、書き込みなので都度の了承が要る。内容を説明して了承を得てから `TD_ALLOW_WRITE=1` を付けて再実行する。可能なら先に `--dry-run` で影響を見せる。
+
+### `tdx_policy.conf がありません`
+
+操作範囲が未設定。SKILL.md の Step 4 でお客様に確認して `policy set` を実行する。
+
+### `分類できないコマンドのため`
+
+ガードが知らないコマンド（tdx の新しい版で増えたものなど）。安全側に倒して拒否している。必要ならユーザーに相談し、`tdx-guard.sh` の分類表の更新をプラグインの保守者に依頼する。
+
+### SQL が書き込み扱いになる
+
+ガードは SQL の先頭キーワード（SELECT / WITH / SHOW / DESCRIBE / EXPLAIN）と危険語（INSERT / DELETE / DROP / CREATE など）で判定する。文字列リテラル中の単語で誤判定されることがある。その場合も、操作範囲が `data=write` なら了承を得て `TD_ALLOW_WRITE=1` で実行できる。`data=read` なら実行できない。
+
+### verify で `ガード判定: ... が allow（期待 deny）`
+
+`tdx-guard.sh` がプラグイン同梱のものと違う可能性がある。同梱版を置き直して `install` をやり直す。
+
+### verify で `ガード: runtime/bin/tdx がガードを経由していない`
+
+`npm i -g` を手で実行したなどで、`runtime/bin/tdx` が差し替わった。`setup-tdx.sh install <プラン>` をやり直す。
 
 ## 認証
 
@@ -50,18 +106,22 @@ Team / Enterprise では管理者設定。個人アカウントでは設定画�
 `<WORKDIR>/runtime/bin` が PATH に入っていない。`device_bash` は毎回新しいシェルなので、コマンドごとに次を付ける。
 
 ```bash
-export PATH="<WORKDIR>/runtime/bin:$PATH"
+source "<WORKDIR>/setup-tdx.sh" >/dev/null
 ```
 
 runtime は接続フォルダの中にあるので消えていない。まず PATH を疑う。
 
-### `npm error code: 'EACCES'`
+### `SHA-256 が一致しません`
 
-`--prefix` を付け忘れて `/usr` に入れようとしている。作業フォルダを指定する。
+一式が転送中に壊れたか、改変されている。**展開しない。** 管理端末で `build-tdx-bundle.sh` を実行し直し、`.tgz` と `.sha256` を両方置き直してもらう。
 
-```bash
-npm i -g --prefix "<WORKDIR>/runtime" @treasuredata/tdx
-```
+### `署名検証に失敗しました`（build-tdx-bundle.sh）
+
+管理端末から `registry.npmjs.org` と `tuf-repo-cdn.sigstore.dev` に到達できる必要がある。社内ミラーで署名検証が通らない場合は、ミラーの管理者に署名の扱いを確認する。`SKIP_SIGNATURE_CHECK=1` で省略できるが、審査に出す一式には使わない。
+
+### td-api.sh（プラン D）: `参照系以外の SQL は既定で止めています`
+
+書き込み系の SQL と判定された。本当に実行する必要があるならユーザーに確認を取り、了承を得てから `TD_ALLOW_WRITE=1` を付けて再実行する。文字列リテラルの中の単語（`'DELETE'` など）で誤判定されることがあるが、その場合も同じ手順。
 
 ### runtime が見つからない
 
@@ -88,7 +148,7 @@ find "$HOME/mnt" -maxdepth 5 -path '*/runtime/bin/tdx' 2>/dev/null
 
 ### `tdx upgrade` を実行してよいか
 
-しない。バージョンが変わると挙動が変わり、再現性が落ちる。バージョンを上げたい場合はユーザーに相談してから `npm i -g @treasuredata/tdx@<version>` を使う。
+しない。npm に繋ぎにいくうえ、バージョンが変わると再現性が落ちる。バージョンを上げたい場合は、管理端末で新しいバージョンの一式を作ってもらう。
 
 ## ファイル
 

@@ -1,6 +1,8 @@
 # tdx コマンド early reference
 
-すべて `tdx --site "$TDX_SITE" <以下>` の形で実行する。出力を構造化したいときは `--json` / `--jsonl` / `--tsv` を付ける。表として読むなら `--table`。
+> プラン A〜C（tdx）のリファレンス。プラン D（`td-api.sh`）は `td-api.sh help` を参照。
+
+すべて `source "<WORKDIR>/setup-tdx.sh" >/dev/null` のあと `tdx --site "$TDX_SITE" <以下>` の形で実行する。出力を構造化したいときは `--json` / `--jsonl` / `--tsv` を付ける。表として読むなら `--table`。
 
 ## データ
 
@@ -31,11 +33,18 @@
 
 | やりたいこと | コマンド |
 |---|---|
-| プロジェクト一覧 | `workflow project list` |
-| ワークフロー一覧 | `workflow list` |
-| 実行 | `workflow start <project> <workflow>` |
-| セッション確認 | `workflow session list` |
-| ログ | `workflow log <attempt_id>` |
+| プロジェクト一覧 | `wf projects` |
+| ワークフロー一覧 | `wf workflows [project]` |
+| 実行履歴 | `wf sessions [project]` / `wf attempts [project]` |
+| タスクの実行時間 | `wf timeline <project.workflow>` |
+| ローカルに取得 | `wf pull <project> [dir]` |
+| 更新を反映（要確認） | `wf push [dir] --dry-run` で差分を見せてから `wf push [dir]` |
+| 実行（要確認） | `wf run <project.workflow>`（引数なしだと対話になるので必ず指定） |
+| 再実行（要確認） | `wf retry <session-id>` |
+| スケジュール | `wf schedules [project.workflow]` / `wf schedule ...`（変更は要確認） |
+| シークレット | `wf secrets ...`（値を会話に出さない） |
+
+「要確認」は本番に影響する操作。実行前にユーザーの了承を取る。正確な引数は `tdx wf <サブコマンド> --help` で確かめる。
 
 ## Engage / 配信
 
