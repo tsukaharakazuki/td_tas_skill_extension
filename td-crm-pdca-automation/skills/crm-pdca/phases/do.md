@@ -13,6 +13,12 @@
 [4] 配信ログ記録
 ```
 
+
+> **保存先と記録（全フェーズ共通）**
+> - このファイルの `projects/…` はすべて `<workspace.root>/projects/…`（`my` 以外の共有作業フォルダ）。書き込む前に、保存先の絶対パスに `my` が含まれないことを確認する。
+> - 開始時に `<workspace.root>/MEMORY.md` を読んで前回までの経緯を伝え、担当者名を確認して `phase-start` を記録する。途中で止める・担当を交代するときは `handover` を記録する。
+> - 詳細: `../reference/workspace-and-memory.md`
+
 ---
 
 ## ステップ1: 【施策/CR】配信直前の最終チェック
@@ -89,6 +95,7 @@ PMがクライアントに即エスカレーション。配信を止めるか、
 ## Phase終了時の処理
 
 - `project_state.json` を更新 → `current_phase: "check"`
+- MEMORY.md に `delivery`（配信日時・チャネル・対象件数・配信ツール）と `phase-complete` を記録し、「現在の状況」の次の作業に **Check 開始予定日**（配信日 + `defaults.check_wait_days`）を書く
 - Checkフェーズに進むタイミングは配信から **`defaults.check_wait_days`（既定3日）経過後**（開封・CTR 等のデータが揃うのを待つ）
 - 遅延計測が必要な指標（LTV増分 等）は配信後 `defaults.ltv_followup_days`（既定30日）のタイミングで追加分析を予定
 

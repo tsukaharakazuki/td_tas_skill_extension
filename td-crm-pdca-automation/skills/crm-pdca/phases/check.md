@@ -16,6 +16,12 @@
 [5] 振り返り会議（PM/施策/CR）
 ```
 
+
+> **保存先と記録（全フェーズ共通）**
+> - このファイルの `projects/…` はすべて `<workspace.root>/projects/…`（`my` 以外の共有作業フォルダ）。書き込む前に、保存先の絶対パスに `my` が含まれないことを確認する。
+> - 開始時に `<workspace.root>/MEMORY.md` を読んで前回までの経緯を伝え、担当者名を確認して `phase-start` を記録する。途中で止める・担当を交代するときは `handover` を記録する。
+> - 詳細: `../reference/workspace-and-memory.md`
+
 ---
 
 ## ステップ1: 【分析】基礎集計の確認
@@ -143,6 +149,7 @@ Checkレポートをクライアント向けに共有する場合、`related_ski
 ## Phase終了時の処理
 
 - `project_state.json` を更新 → `current_phase: "action"`
+- MEMORY.md に `phase-complete` として記録（KPI判定結果の要約、主要発見、LTV追加分析の予定日）
 - 分析レポート一式を Action フェーズに引き継ぎ
 
 ### 次フェーズへの引き継ぎ

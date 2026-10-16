@@ -14,6 +14,12 @@
 [3] 次サイクル準備 or プロジェクト終了処理
 ```
 
+
+> **保存先と記録（全フェーズ共通）**
+> - このファイルの `projects/…` はすべて `<workspace.root>/projects/…`（`my` 以外の共有作業フォルダ）。書き込む前に、保存先の絶対パスに `my` が含まれないことを確認する。
+> - 開始時に `<workspace.root>/MEMORY.md` を読んで前回までの経緯を伝え、担当者名を確認して `phase-start` を記録する。途中で止める・担当を交代するときは `handover` を記録する。
+> - 詳細: `../reference/workspace-and-memory.md`
+
 ---
 
 ## ステップ1: 【PM】総括
@@ -116,6 +122,8 @@ Check のインサイトを以下の構造で整理:
 <議論の要点>
 ```
 
+MEMORY.md に `approval` として記録（承認④の選択肢・判断理由・次サイクルの目標）。
+
 ---
 
 ## ステップ3: 次サイクル準備 or プロジェクト終了
@@ -150,10 +158,11 @@ Check のインサイトを以下の構造で整理:
 - `project_state.json` 更新（継続 or completed）
 - 次サイクルがある場合: Plan から再開
 - 全サイクル完了の場合: アーカイブ (`projects/_archive/` に移動を提案)
+- MEMORY.md に `phase-complete`（継続の場合は次サイクルの開始予定も）、完了・アーカイブの場合は `archive` を記録し、「現在の状況」の進行中プロジェクトから外す
 
 ### 学習の蓄積
 プロジェクト終了時、クロスプロジェクトで活かせる知見は
-`projects/learnings.md` に追記（PMが実施）。
+`projects/learnings.md` に追記（PMが実施）。追記したら MEMORY.md に `learning` として記録する。
 
 例:
 ```markdown

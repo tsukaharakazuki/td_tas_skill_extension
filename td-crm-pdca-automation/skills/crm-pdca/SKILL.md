@@ -1,6 +1,6 @@
 ---
 name: crm-pdca
-description: CRM施策のPDCAサイクルを4ペルソナ（PM・分析・施策・クリエイティブ）で分担しながら、Plan→Do→Check→Actionを人間の意思決定ポイントを挟みながら進めるためのメインSkill。休眠掘り起こし、新作キャンペーンなど複数プロジェクトの管理も担う。「/crm-pdca」「CRM施策のPDCAを始めたい」「施策の振り返りをしたい」などで発動する。
+description: CRM施策のPDCAサイクルを4ペルソナ（PM・分析・施策・クリエイティブ）で分担しながら、Plan→Do→Check→Actionを人間の意思決定ポイントを挟みながら進めるためのメインSkill。休眠掘り起こし、新作キャンペーンなど複数プロジェクトの管理も担う。成果物は my 以外の共有作業フォルダに保存し、作業の経緯を MEMORY.md に時系列で記録して担当者間で引き継ぐ。「/crm-pdca」「CRM施策のPDCAを始めたい」「施策の振り返りをしたい」などで発動する。
 action: true
 ---
 
@@ -30,6 +30,22 @@ CRM施策（休眠掘り起こし、新作キャンペーン、クロスセル�
 `config/environment.yml` が存在しない場合は PDCA を始めず、「先にセットアップが必要です。`https://github.com/tsukaharakazuki/td_tas_skill_extension/tree/main/td-crm-pdca-automation` を読み込んで『CRM PDCAを設定したい』と依頼してください」と案内する。
 `<TO_BE_CONFIRMED>` が残っている項目に依存する作業（例: Parent Segment未確定でのセグメント作成）に入る前に、その値を利用者に確認し、確定したら `environment.yml` を更新する。
 
+### 0-1. 保存先は「my」以外の共有作業フォルダ（必須）
+Treasure AI Studio の `my` フォルダは本人しかアクセスできず、他のメンバーに共有できない。**成果物・設定・MEMORY.md は必ず `my` 以外の共有作業フォルダに保存する。**
+
+- 共有作業フォルダは `environment.yml` の `workspace.root`。`projects/` と `MEMORY.md` のパスはカレントディレクトリではなく `workspace.root` を基準に解決する。
+- **ファイルを書き込む直前に毎回**、保存先の絶対パスを `/` で区切り、`my` と一致する要素（大文字小文字を区別しない）がないことを確認する。あれば書き込まずに止め、共有作業フォルダを確認する。
+- `workspace` の設定がない（旧バージョンでセットアップした）場合や、`workspace.root` が `my` 配下を指している場合は、PDCA を進める前に共有作業フォルダを確定し直す（移行手順は `reference/workspace-and-memory.md` 1章）。
+
+### 0-2. MEMORY.md の読み込みと記録（必須）
+作業は段階を追って進み、担当者をまたいで引き継がれる。`<workspace.root>/MEMORY.md` を、ワークスペース全体の時系列の作業記録として使う。
+
+- **起動時:** MEMORY.md の「現在の状況」と直近10件程度の履歴を読み、前回までの経緯（いつ・誰が・どこまで・次に何を）を2〜4行で伝える。続けて、今回の **担当者名**（または役割）を1回だけ確認する。
+- **作業中:** プロジェクト立ち上げ、フェーズ開始・完了、承認①〜④、書き込みを伴う tdx 操作、配信、設定変更、学びの追記、アーカイブのたびに「更新履歴」へ追記し、「現在の状況」を更新する。
+- **中断・交代時:** `handover` として、終わったこと・未完了・次の担当者が最初にやること・承認待ちを記録する。
+- 履歴は **追記のみ**（古いものが上、新しいものが下）。過去の記録は編集・削除せず、誤りは `correction` として記録する。
+- 書式・種別・タイミングの詳細は `reference/workspace-and-memory.md` 2〜3章。
+
 ### 1. 開始時のモード確認
 ユーザーが `/crm-pdca` を起動したら、**最初に以下を確認**する（AskUserQuestionで）:
 
@@ -58,8 +74,9 @@ CRM施策（休眠掘り起こし、新作キャンペーン、クロスセル�
 4. **Action: 次サイクルの意思決定**（継続 / 修正 / 中止）
 
 ### 4. プロジェクト状態の保存
-各フェーズの終了時に `projects/<project-id>/project_state.json` を更新。
-成果物（分析レポート、ブリーフ、Checkレポート等）は同プロジェクト配下のサブフォルダに保存する。
+各フェーズの終了時に `<workspace.root>/projects/<project-id>/project_state.json` を更新（`history` には担当者名を `by` に入れる）。
+成果物（分析レポート、ブリーフ、Checkレポート等）は同プロジェクト配下のサブフォルダに保存する。保存先が `my` 配下でないことを毎回確認する（0-1）。
+あわせて `MEMORY.md` に記録する（0-2）。
 
 ### 5. tdxコマンドは事前承認
 `tdx` を実行する前は必ず `AskUserQuestion` で承認を取る（ハーネス全体のルール）。
@@ -72,25 +89,27 @@ SQLに使うテーブル名・カラム名・条件は `config/environment.yml` 
 ## プロジェクト管理の構造
 
 ```
-<作業フォルダ>/projects/
-└── <project-id>/                  # 例: dormant-revive-2026Q4, spring-new-2026
-    ├── project_state.json         # 進捗・担当範囲・意思決定履歴
-    ├── 01_plan/
-    │   ├── brief.md               # PMの施策ブリーフ
-    │   ├── analysis.md            # 分析担当のレポート
-    │   ├── direction.md           # 施策方向性（承認済）
-    │   ├── kpi.md                 # 評価指標（承認済）
-    │   ├── segment_spec.md        # セグメント定義
-    │   └── creative_spec.md       # クリエイティブ仕様
-    ├── 02_do/
-    │   ├── delivery_log.md        # 配信実行ログ
-    │   └── delivery_result/       # 配信スナップショット
-    ├── 03_check/
-    │   ├── metrics.md             # 基礎集計
-    │   ├── analysis_report.md     # 多角分析
-    │   └── insights.md            # 洞察サマリ
-    └── 04_action/
-        └── next_action.md         # 次サイクル提案
+<共有作業フォルダ = workspace.root（my 以外）>/
+├── MEMORY.md                      # ワークスペース全体の時系列の作業記録
+└── projects/
+    └── <project-id>/                  # 例: dormant-revive-2026Q4, spring-new-2026
+        ├── project_state.json         # 進捗・担当範囲・意思決定履歴
+        ├── 01_plan/
+        │   ├── brief.md               # PMの施策ブリーフ
+        │   ├── analysis.md            # 分析担当のレポート
+        │   ├── direction.md           # 施策方向性（承認済）
+        │   ├── kpi.md                 # 評価指標（承認済）
+        │   ├── segment_spec.md        # セグメント定義
+        │   └── creative_spec.md       # クリエイティブ仕様
+        ├── 02_do/
+        │   ├── delivery_log.md        # 配信実行ログ
+        │   └── delivery_result/       # 配信スナップショット
+        ├── 03_check/
+        │   ├── metrics.md             # 基礎集計
+        │   ├── analysis_report.md     # 多角分析
+        │   └── insights.md            # 洞察サマリ
+        └── 04_action/
+            └── next_action.md         # 次サイクル提案
 ```
 
 `project_state.json` スキーマは `templates/project_state.json` を参照。
@@ -179,14 +198,20 @@ SQLに使うテーブル名・カラム名・条件は `config/environment.yml` 
 - 環境設定: `config/environment.yml`
 - データソースと定番SQL: `reference/data-sources.md`
 - プロジェクト管理: `reference/project-management.md`
+- 共有作業フォルダと MEMORY.md: `reference/workspace-and-memory.md`
 
 ---
 
 ## 初回起動時の推奨応答テンプレート
 
 ```
-【PM】CRM施策のPDCAサイクルを開始します。まず全体設計のため、以下を確認させてください。
+【PM】CRM施策のPDCAサイクルを開始します。
 
+（MEMORY.md の要約）前回は <日付> に <担当者> さんが <project-id> の <到達点> まで進めています。次は <次の作業> です。
+
+まず全体設計のため、以下を確認させてください。
+
+0. 今回の作業担当者のお名前（または役割）
 1. 対象プロジェクト（新規 or 既存継続）
 2. 現在のフェーズ（Plan / Do / Check / Action）
 3. 各ペルソナの業務範囲

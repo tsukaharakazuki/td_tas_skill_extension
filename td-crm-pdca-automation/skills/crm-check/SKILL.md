@@ -9,14 +9,16 @@ action: true
 このSkillは `crm-pdca` の Check フェーズを直接開始する。
 
 ## 動作
-1. 対象プロジェクトを確認（AskUserQuestion）
+1. `MEMORY.md` を読んで経緯を伝え、担当者名を確認。対象プロジェクトを確認（AskUserQuestion）
 2. `project_state.json` から配信実績情報と KPI を読み込む
 3. 配信結果の基礎集計テーブル有無を `environment.yml` の `engage_analytics` で確認、未整備なら `engage_analytics.package_url` の導入を提案
 4. `crm-pdca/phases/check.md` のステップに従って多角分析を実行
 5. 完了後 `current_phase: "action"` に更新
 
 ## 前提
-- 作業フォルダに `crm-pdca/config/environment.yml` があること（無ければ `crm-pdca/SKILL.md` の手順0に従いセットアップを案内）
+- 共有作業フォルダ（`my` 以外）に `crm-pdca/config/environment.yml` があること（無ければ `crm-pdca/SKILL.md` の手順0に従いセットアップを案内）
+- 成果物は `workspace.root`（`my` 以外の共有作業フォルダ）配下にのみ保存する。書き込む前に保存先の絶対パスに `my` が含まれないことを確認する
+- 開始時に `<workspace.root>/MEMORY.md` を読んで前回までの経緯を伝え、担当者名を確認する。承認・フェーズ完了・中断時は MEMORY.md に追記する（`crm-pdca/reference/workspace-and-memory.md`）
 - Do フェーズが完了し、配信から `defaults.check_wait_days`（既定3日）以上経過していること（開封・CTR データ揃い待ち）
 - 開始時に 【分析】ペルソナで入る
 - `reference/data-sources.md`（または `related_skills.sql_guideline`）のSQLガイドライン厳守

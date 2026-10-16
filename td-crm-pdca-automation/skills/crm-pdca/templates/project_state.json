@@ -1,5 +1,5 @@
 {
-  "$schema_version": "1.0",
+  "$schema_version": "1.1",
   "project_id": "<project-id>",
   "project_name": "<human readable name>",
   "project_type": "dormant_revive | new_product | f2_conversion | cross_sell | reactivation | other",
@@ -9,6 +9,8 @@
   "created_at": "<ISO8601>",
   "updated_at": "<ISO8601>",
   "owner_human": "<クライアント名>",
+  "workspace_root": "<共有作業フォルダの絶対パス（my 以外）>",
+  "last_updated_by": "<担当者名>",
   "pm_scope": {
     "project_manager": "full_auto | consult | human_led",
     "analyst": "full_auto | consult | human_led",
@@ -68,6 +70,7 @@
       "ts": "<ISO8601>",
       "phase": "plan",
       "actor": "pm",
+      "by": "<担当者名>",
       "event": "project_created",
       "detail": ""
     }

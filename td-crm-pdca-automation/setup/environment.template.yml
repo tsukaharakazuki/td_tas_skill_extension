@@ -1,10 +1,15 @@
 # CRM PDCA 環境設定
-# セットアップSkillがヒアリング結果で埋め、作業フォルダの
+# セットアップSkillがヒアリング結果で埋め、共有作業フォルダ（`my` 以外）の
 #   .claude/skills/crm-pdca/config/environment.yml
 # として保存します。分からない値は <TO_BE_CONFIRMED> のまま残してください。
 # APIキー・パスワード・個人のメールアドレスは書かないでください。
 
-schema_version: 1
+schema_version: 2                     # 2: workspace（共有作業フォルダ・MEMORY.md）を追加
+
+workspace:                            # 共有作業フォルダ（Step 2 で確定）
+  root: "<TO_BE_CONFIRMED>"           # 絶対パス。`my` フォルダ自身やその配下は不可
+  memory_file: "MEMORY.md"            # root からの相対パス。作業の時系列記録
+  projects_dir: "projects"            # root からの相対パス
 
 organization:
   name: "<TO_BE_CONFIRMED>"           # A1 レポート見出しに使う会社名・ブランド名

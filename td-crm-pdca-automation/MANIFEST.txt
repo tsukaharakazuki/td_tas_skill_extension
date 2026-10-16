@@ -4,6 +4,7 @@ projects/_archive/.gitkeep
 projects/_index.md
 projects/learnings.md
 setup/HEARING.md
+setup/MEMORY.template.md
 setup/data-sources.template.md
 setup/environment.template.yml
 skills/crm-action/SKILL.md
@@ -19,6 +20,7 @@ skills/crm-pdca/phases/check.md
 skills/crm-pdca/phases/do.md
 skills/crm-pdca/phases/plan.md
 skills/crm-pdca/reference/project-management.md
+skills/crm-pdca/reference/workspace-and-memory.md
 skills/crm-pdca/templates/action_proposal.md
 skills/crm-pdca/templates/analysis_report.md
 skills/crm-pdca/templates/check_report.md
