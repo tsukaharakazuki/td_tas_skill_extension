@@ -14,8 +14,11 @@ CRM施策は「1本の施策」ではなく「学び続けるサイクル」。
 
 ## 2. ディレクトリ構造
 
+すべて **`my` 以外の共有作業フォルダ**（`environment.yml` の `workspace.root`）に置く。Treasure AI Studio の `my` フォルダは本人しかアクセスできないため、ここに置いた成果物は他のメンバーと共有できない（`reference/workspace-and-memory.md` 1章）。
+
 ```
-<作業フォルダ>/
+<共有作業フォルダ = workspace.root（my 以外）>/
+├── MEMORY.md                          # 時系列の作業記録（全プロジェクト・全担当者）
 ├── .claude/skills/                    # Skill定義（本体）
 │   └── crm-pdca/config/environment.yml  # 環境設定（セットアップで生成）
 ├── projects/                           # 各施策プロジェクト
@@ -62,10 +65,12 @@ PM が実行:
 
 1. **AskUserQuestion**: プロジェクトタイプを選定
 2. **AskUserQuestion**: project-id 候補を2〜3個提示 → ユーザーが選択
-3. **Bash**: `mkdir -p projects/<project-id>/{01_plan,02_do,03_check,04_action}`
-4. **Write**: `project_state.json` を `templates/` からコピー＆初期化
-5. **Write**: `projects/<project-id>/README.md` を作成（施策概要）
-6. **Edit**: `projects/_index.md` に新プロジェクトを追記
+3. **確認**: 作成先 `<workspace.root>/projects/<project-id>/` の絶対パスに `my` が含まれないこと
+4. **Bash**: `mkdir -p <workspace.root>/projects/<project-id>/{01_plan,02_do,03_check,04_action}`
+5. **Write**: `project_state.json` を `templates/` からコピー＆初期化（`history` の最初のエントリの `by` に担当者名）
+6. **Write**: `projects/<project-id>/README.md` を作成（施策概要）
+7. **Edit**: `projects/_index.md` に新プロジェクトを追記
+8. **Edit**: `MEMORY.md` に `project-created` を記録し、「現在の状況」の進行中プロジェクトに追加
 
 ---
 
@@ -83,7 +88,7 @@ PM が実行:
 - `pm_scope`: 4ペルソナの自動化レベル
 - `approvals`: 4つの承認ポイントの状態
 - `artifacts`: 各成果物の相対パス
-- `history`: イベントログ
+- `history`: イベントログ（`by` に担当者名。ワークスペース横断の時系列は `MEMORY.md`）
 
 ### 更新タイミング
 - フェーズ移行時
@@ -114,6 +119,24 @@ PM が実行:
 ```
 
 PM が各節目で更新する。
+
+---
+
+## 5-2. MEMORY.md — 時系列の作業記録（人とAIの引き継ぎ用）
+
+CRM施策は段階を追って進み、日をまたぎ、担当者も交代する。`<workspace.root>/MEMORY.md` に **いつ・誰が・何をして・次に何をするか** を時系列で残し、次の担当者（人もAIも）が最初に読む。
+
+| ファイル | 役割 |
+|---|---|
+| `MEMORY.md` | ワークスペース全体の時系列（追記のみ）＋現在の状況の要約 |
+| `_index.md` | プロジェクト一覧（最新状態） |
+| `project_state.json` | プロジェクト単位の最新状態（AI向け） |
+
+- 起動時に必ず読み、前回までの経緯を利用者に伝える
+- プロジェクト立ち上げ・フェーズ開始/完了・承認①〜④・配信・設定変更・学び追記・アーカイブ・中断/交代のたびに追記
+- 過去の記録は消さない。誤りは `correction` として追記
+
+書式と種別の一覧: `reference/workspace-and-memory.md` 2章
 
 ---
 
@@ -215,3 +238,9 @@ Plan 開始時の `pm_scope` を `project_state.json` に記録し、途中変�
 
 ### E. 学びが活用されない
 → プロジェクト完了時の learnings.md 追記を必須ステップに。
+
+### F. 成果物が本人しか見られない
+→ `my` フォルダに保存すると他のメンバーが開けない。保存先は必ず `workspace.root`（`my` 以外）にし、書き込み前にパスを確認する。
+
+### G. 担当者が変わると経緯が分からない
+→ フェーズ・承認・中断のたびに `MEMORY.md` に追記し、次の担当者は起動時に MEMORY.md を読む。

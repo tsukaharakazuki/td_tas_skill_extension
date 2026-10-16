@@ -9,7 +9,7 @@ action: true
 このSkillは `crm-pdca` の Action フェーズを直接開始する。
 
 ## 動作
-1. 対象プロジェクトを確認（AskUserQuestion）
+1. `MEMORY.md` を読んで経緯を伝え、担当者名を確認。対象プロジェクトを確認（AskUserQuestion）
 2. `03_check/analysis_report.md` と `03_check/insights.md` を読み込む
 3. `crm-pdca/phases/action.md` のステップに従って:
    - 【PM】総括
@@ -19,7 +19,9 @@ action: true
 5. 継続/修正なら新サイクルの Plan へ、終了ならプロジェクトアーカイブ
 
 ## 前提
-- 作業フォルダに `crm-pdca/config/environment.yml` があること（無ければ `crm-pdca/SKILL.md` の手順0に従いセットアップを案内）
+- 共有作業フォルダ（`my` 以外）に `crm-pdca/config/environment.yml` があること（無ければ `crm-pdca/SKILL.md` の手順0に従いセットアップを案内）
+- 成果物は `workspace.root`（`my` 以外の共有作業フォルダ）配下にのみ保存する。書き込む前に保存先の絶対パスに `my` が含まれないことを確認する
+- 開始時に `<workspace.root>/MEMORY.md` を読んで前回までの経緯を伝え、担当者名を確認する。承認・フェーズ完了・中断時は MEMORY.md に追記する（`crm-pdca/reference/workspace-and-memory.md`）
 - Check フェーズが完了していること
 - 開始時に 【PM】ペルソナで入る
 - 必ず AskUserQuestion で承認④ を取る

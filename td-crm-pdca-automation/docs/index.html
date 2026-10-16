@@ -243,7 +243,8 @@
 <span class="cmd">/crm-check</span>   <span class="cmt"># Check フェーズだけ</span>
 <span class="cmd">/crm-action</span>  <span class="cmt"># Action フェーズだけ</span></pre></div>
         </div>
-        <div class="terminal" style="margin-top:18px;"><span class="label">セットアップ後の作業フォルダ</span><pre>&lt;作業フォルダ&gt;/
+        <div class="terminal" style="margin-top:18px;"><span class="label">セットアップ後の共有作業フォルダ（my 以外）</span><pre>&lt;共有作業フォルダ&gt;/                 <span class="cmt"># 例: my と同じ階層の crm-pdca/</span>
+├── MEMORY.md                           <span class="cmt"># 時系列の作業記録（担当者間の引き継ぎ）</span>
 ├── .claude/skills/
 │   ├── crm-pdca/
 │   │   ├── config/environment.yml      <span class="cmt"># 環境設定（セットアップで生成）</span>
@@ -254,6 +255,8 @@
     ├── _index.md                       <span class="cmt"># プロジェクト一覧</span>
     ├── learnings.md                    <span class="cmt"># プロジェクト横断の学びログ</span>
     └── &lt;project-id&gt;/01_plan 02_do 03_check 04_action</pre></div>
+        <div class="callout"><strong>「my」フォルダには置きません：</strong> Treasure AI Studio の <code>my</code> フォルダはご本人しか開けないため、ここに置くと他のメンバーと共有できません。Skill・設定・成果物・<code>MEMORY.md</code> はすべて <code>my</code> 以外の共有作業フォルダに置きます。今いるフォルダが <code>my</code> の中なら、セットアップ時に <code>my</code> と同じ階層へ共有用フォルダを作ります。保存のたびにパスを確認し、<code>my</code> 配下には書き込みません。</div>
+        <div class="callout"><strong>MEMORY.md で引き継ぐ：</strong> PDCAは日をまたぎ、担当者も交代します。セットアップ、設定変更、プロジェクト立ち上げ、フェーズ開始・完了、承認①〜④、配信、中断・交代のたびに、日時・担当者・内容・決定事項・次の作業を <code>MEMORY.md</code> に時系列で追記します。各コマンドは起動時にこれを読み、「前回は誰がどこまで進めたか」を伝えてから始めます。</div>
       </section>
 
       <section class="section" id="rollout">

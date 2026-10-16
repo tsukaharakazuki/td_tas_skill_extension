@@ -24,6 +24,12 @@
 [7] 配信ツールでコンテンツ ファイナライズ
 ```
 
+
+> **保存先と記録（全フェーズ共通）**
+> - このファイルの `projects/…` はすべて `<workspace.root>/projects/…`（`my` 以外の共有作業フォルダ）。書き込む前に、保存先の絶対パスに `my` が含まれないことを確認する。
+> - 開始時に `<workspace.root>/MEMORY.md` を読んで前回までの経緯を伝え、担当者名を確認して `phase-start` を記録する。途中で止める・担当を交代するときは `handover` を記録する。
+> - 詳細: `../reference/workspace-and-memory.md`
+
 ---
 
 ## ステップ1: 【PM】ヒアリング
@@ -98,6 +104,8 @@
 
 成果物: `projects/<project-id>/01_plan/direction.md` （承認済方向性を記録）
 
+MEMORY.md に `approval` として記録（承認①の結果・選んだ方向性・判断理由）。書式: `../reference/workspace-and-memory.md`
+
 ---
 
 ## 🙋 承認②: KPIの確定
@@ -120,6 +128,8 @@
 ```
 
 成果物: `projects/<project-id>/01_plan/kpi.md`
+
+MEMORY.md に `approval` として記録（承認②で確定した主KPI・副KPIと目標値）。書式: `../reference/workspace-and-memory.md`
 
 ---
 
@@ -156,6 +166,8 @@
 → 承認 / 修正 / 中止
 ```
 
+MEMORY.md に `approval` として記録（承認③の結果。修正・中止の場合はその理由）。書式: `../reference/workspace-and-memory.md`
+
 ---
 
 ## ステップ6: 【施策】セグメント作成
@@ -167,6 +179,7 @@
 - `related_skills.segment_builder` が設定されていればそのSkillを参照
 - `tdx` コマンド実行時は必ず AskUserQuestion で承認
 - 進行中の他プロジェクトとの顧客重複を確認（`reference/project-management.md` 6章）
+- セグメントを作成・更新したら MEMORY.md に `tdx-run` として記録（セグメント名・件数・Parent Segment）
 
 ## ステップ7: 【CR/施策】配信ツールでコンテンツ ファイナライズ
 
@@ -190,5 +203,7 @@
   }
 }
 ```
+
+MEMORY.md に `phase-complete` として記録し、「現在の状況」を更新する（次の作業: Do の配信直前チェック、担当: 【施策】）。
 
 Phase 2 (Do) に進む準備完了を PM が宣言する。
