@@ -1,0 +1,7 @@
+{
+  "name": "td-ad-purchase-analytics",
+  "description": "Cookie acquisition to member identification and long-term purchase analytics with TD Workflows and branded HTML dashboards",
+  "source": "./",
+  "skills": ["./td-ad-purchase-analytics"],
+  "strict": false
+}

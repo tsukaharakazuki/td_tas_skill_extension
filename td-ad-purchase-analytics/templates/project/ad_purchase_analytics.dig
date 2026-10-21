@@ -1,0 +1,99 @@
+# Local configuration only. No schedule or external activation is enabled.
+timezone: Asia/Tokyo
+
+_export:
+  !include : config/params.yml
+
++require_review:
+  if>: ${!configuration_reviewed}
+  _do:
+    fail>: Configure adapters and compile config before running this workflow.
+
++web:
+  td>: queries/00_web.sql
+  create_table: ${table_prefix}_web_${session_unixtime}_${attempt_id}
+
++event_sessions:
+  td>: queries/10_sessionize.sql
+  create_table: ${table_prefix}_event_sessions_${session_unixtime}_${attempt_id}
+
++sessions:
+  td>: queries/20_sessions.sql
+  create_table: ${table_prefix}_sessions_${session_unixtime}_${attempt_id}
+
++members:
+  td>: queries/21_member_observations.sql
+  create_table: ${table_prefix}_members_${session_unixtime}_${attempt_id}
+
++acquisition:
+  td>: queries/30_acquisition.sql
+  create_table: ${table_prefix}_acquisition_${session_unixtime}_${attempt_id}
+
++touches:
+  td>: queries/40_touches.sql
+  create_table: ${table_prefix}_touches_${session_unixtime}_${attempt_id}
+
++order_input:
+  if>: ${purchase_mode === 'separate'}
+  _do:
+    +separate:
+      td>: queries/00_orders_separate.sql
+      create_table: ${table_prefix}_order_raw_${session_unixtime}_${attempt_id}
+  _else_do:
+    +web:
+      td>: queries/50_orders_web.sql
+      create_table: ${table_prefix}_order_raw_${session_unixtime}_${attempt_id}
+
++orders:
+  td>: queries/51_orders.sql
+  create_table: ${table_prefix}_orders_${session_unixtime}_${attempt_id}
+
++order_credit:
+  td>: queries/60_order_credit.sql
+  create_table: ${table_prefix}_order_credit_${session_unixtime}_${attempt_id}
+
++lookback:
+  td>: queries/61_lookback.sql
+  create_table: ${table_prefix}_lookback_${session_unixtime}_${attempt_id}
+
++costs:
+  if>: ${ad_costs_enabled}
+  _do:
+    +enabled:
+      td>: queries/00_costs.sql
+      create_table: ${table_prefix}_costs_${session_unixtime}_${attempt_id}
+  _else_do:
+    +disabled:
+      td>: queries/00_costs_disabled.sql
+      create_table: ${table_prefix}_costs_${session_unixtime}_${attempt_id}
+
++cohort:
+  td>: queries/70_cohort.sql
+  create_table: ${table_prefix}_cohort_${session_unixtime}_${attempt_id}
+
++inflow:
+  td>: queries/71_inflow.sql
+  create_table: ${table_prefix}_inflow_${session_unixtime}_${attempt_id}
+
++qa:
+  td>: queries/80_qa.sql
+  create_table: ${table_prefix}_qa_${session_unixtime}_${attempt_id}
+
++read_qa:
+  td>:
+    query: |
+      SELECT hard_errors
+      FROM ${td.database}.${table_prefix}_qa_${session_unixtime}_${attempt_id}
+  store_last_results: true
+
++assert_qa:
+  if>: ${td.last_results.hard_errors > 0}
+  _do:
+    fail>: QA failed. Keep the last successful dashboard and inspect this attempt's QA table.
+
++complete:
+  td>: queries/90_complete.sql
+  create_table: ${table_prefix}_complete_${session_unixtime}_${attempt_id}
+
+_error:
+  echo>: Build failed. Do not promote this attempt or overwrite the last successful dashboard.

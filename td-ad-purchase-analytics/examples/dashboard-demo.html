@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--
+  Treasure AI dashboard template (td-tas-dashboard-template)
+  KEEP: the <head> fonts and :root tokens, the header logo, and the footer credit.
+  REPLACE: <title>【合成データ・デモ】広告獲得・購買転換トラッキング | Treasure AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,600;0,700;1,400&family=Manrope:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Brand palette: HEX values from Treasure AI Brand Guidelines 2026 v0.1 (p.11) */
+    --tas-primary-1: #494FFF;
+    --tas-primary-2: #8753FF;
+    --tas-secondary-1: #847BF2;
+    --tas-secondary-2: #C466D4;
+    --tas-accent-1: #9DCC4C;
+    --tas-accent-2: #D9E47C;
+    --tas-accent-3: #EE2328;
+    --tas-accent-4: #F15C60;
+    --tas-accent-5: #F69068;
+    --tas-neutral-1: #FFFFFF;
+    --tas-neutral-2: #000000;
+    /* Derived tints built from the palette (the guide does not define these) */
+    --tas-surface: rgba(73, 79, 255, 0.06);
+    --tas-muted: rgba(0, 0, 0, 0.64);
+    --tas-border: rgba(0, 0, 0, 0.12);
+    --tas-font-display: "Manrope", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+    --tas-font-body: "Inter", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--tas-neutral-1); color: var(--tas-neutral-2); font-family: var(--tas-font-body); font-size: 15px; line-height: 1.6; text-align: left; }
+  .tas-header { display: flex; align-items: center; padding: 24px 40px; border-bottom: 1px solid var(--tas-border); }
+  .tas-logo { width: 200px; height: auto; display: block; }
+  .tas-main { max-width: 1120px; margin: 0 auto; padding: 40px; }
+  .tas-page-title { font-family: var(--tas-font-display); font-weight: 700; font-size: 40px; line-height: 1.15; margin: 0 0 8px; }
+  .tas-lead { color: var(--tas-muted); margin: 0 0 32px; max-width: 720px; }
+  .tas-section-title { font-family: var(--tas-font-display); font-weight: 700; font-size: 24px; line-height: 1.25; margin: 40px 0 16px; }
+  .tas-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+  .tas-kpi { background: var(--tas-surface); border-radius: 12px; padding: 20px; }
+  .tas-kpi-label { font-weight: 600; font-size: 13px; color: var(--tas-muted); }
+  .tas-kpi-value { font-family: var(--tas-font-display); font-weight: 700; font-size: 32px; line-height: 1.1; color: var(--tas-primary-1); margin-top: 6px; }
+  .tas-kpi-note { font-size: 13px; margin-top: 6px; }
+  .tas-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tas-table th { background: var(--tas-primary-1); color: var(--tas-neutral-1); font-weight: 700; text-align: left; padding: 10px 12px; }
+  .tas-table td { padding: 10px 12px; border-bottom: 1px solid var(--tas-border); }
+  .tas-table .tas-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tas-bars { display: grid; gap: 10px; }
+  .tas-bar-row { display: grid; grid-template-columns: 140px 1fr 72px; align-items: center; gap: 12px; font-size: 14px; }
+  .tas-bar-track { background: var(--tas-surface); border-radius: 6px; height: 16px; overflow: hidden; }
+  .tas-bar-fill { height: 100%; border-radius: 6px; }
+  .tas-callout { border-left: 4px solid var(--tas-primary-2); padding: 12px 20px; margin: 32px 0; font-style: italic; font-size: 17px; line-height: 1.35; }
+  .tas-footer { display: flex; justify-content: space-between; padding: 20px 40px; border-top: 1px solid var(--tas-border); font-size: 12px; color: var(--tas-muted); }
+  @media (max-width: 640px) {
+    .tas-header { padding: 16px; }
+    .tas-main { padding: 24px 16px; }
+    .tas-page-title { font-size: 30px; }
+    .tas-bar-row { grid-template-columns: 96px 1fr 56px; }
+  }
+</style>
+</head>
+<body>
+<header class="tas-header">
+  <svg class="tas-logo" role="img" aria-label="Treasure AI" id="tas-logo-horizontal" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="731.60 508.90 456.40 62.40">
+  <!-- Generator: Adobe Illustrator 30.2.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 1)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#linear-gradient3);
+      }
+
+      .st1 {
+        fill: url(#linear-gradient2);
+        opacity: .6;
+      }
+
+      .st2 {
+        fill: url(#linear-gradient1);
+        opacity: .4;
+      }
+
+      .st3 {
+        fill: url(#linear-gradient);
+      }
+
+      .st4 {
+        fill: #2e40aa;
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="748.6" y1="554.3" x2="798.1" y2="504.8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff86b4"/>
+      <stop offset="0" stop-color="#fa84b7"/>
+      <stop offset=".2" stop-color="#c572dd"/>
+      <stop offset=".3" stop-color="#a468f5"/>
+      <stop offset=".3" stop-color="#9864ff"/>
+      <stop offset=".4" stop-color="#8470ff"/>
+      <stop offset=".7" stop-color="#3d9cff"/>
+      <stop offset=".9" stop-color="#11b8ff"/>
+      <stop offset="1" stop-color="#00c3ff"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient1" x1="782.4" y1="520.6" x2="782.4" y2="504.3" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset=".9" stop-color="#00baff"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient2" x1="800.8" y1="519.6" x2="828.2" y2="519.6" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset=".9" stop-color="#30c4ff"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient3" x1="780.6" y1="543.9" x2="813.4" y2="550.1" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7b32dc"/>
+      <stop offset="1" stop-color="#32bdff"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <path class="st4" d="M862.6,524.6h-14.3v-7.3h36.5v7.3h-14.3v37.6h-7.9v-37.6Z"/>
+    <path class="st4" d="M885.6,528.4h7.8v7.6c2.1-5.1,6-8.5,12-8.3v8.2h-.4c-6.8,0-11.5,4.4-11.5,13.4v12.9h-7.8v-33.9Z"/>
+    <path class="st4" d="M908.7,545.4h0c0-9.8,6.9-17.8,16.5-17.8s16.2,8.5,16.2,18.2,0,1.4-.1,2.2h-24.9c.8,5.5,4.7,8.6,9.7,8.6s6.5-1.4,9.2-4l4.6,4c-3.2,3.8-7.6,6.3-13.9,6.3-9.8,0-17.4-7.1-17.4-17.6ZM933.8,542.9c-.5-5-3.5-8.9-8.6-8.9s-8.1,3.7-8.8,8.9h17.4Z"/>
+    <path class="st4" d="M945.9,552.5h0c0-7.4,5.8-11,14-11s6.5.6,9.1,1.4v-.8c0-4.8-3-7.4-8.4-7.4s-6.6.8-9.7,2.1l-2.1-6.1c3.8-1.7,7.4-2.8,12.8-2.8s8.9,1.3,11.2,3.8c2.5,2.4,3.7,6,3.7,10.5v20.1h-7.6v-4.2c-2.3,2.8-5.8,4.9-11,4.9s-12.1-3.7-12.1-10.5ZM969.2,550v-2.3c-2-.8-4.6-1.3-7.7-1.3-5,0-8,2.1-8,5.6h0c0,3.4,2.9,5.3,6.6,5.3s9-3,9-7.2Z"/>
+    <path class="st4" d="M982.3,557.8l3.5-5.3c3.7,2.8,7.6,4.2,11.1,4.2s5.3-1.4,5.3-3.7h0c0-2.8-3.6-3.7-7.6-4.9-5-1.4-10.6-3.5-10.6-9.9h0c0-6.6,5.3-10.5,12.1-10.5s8.9,1.5,12.4,3.8l-3.1,5.5c-3.3-2-6.7-3.2-9.6-3.2s-4.7,1.5-4.7,3.3h0c0,2.6,3.7,3.7,7.6,4.9,4.9,1.5,10.5,3.8,10.5,9.9h0c0,7.2-5.5,10.8-12.6,10.8s-10.1-1.7-14.4-5.1Z"/>
+    <path class="st4" d="M1015.7,549.9v-21.5h7.8v19.2c0,5.3,2.6,8.2,7.2,8.2s7.6-3.1,7.6-8.3v-19.1h7.8v33.9h-7.8v-5.3c-2.2,3.2-5.3,6-10.6,6-7.6,0-12.1-5.1-12.1-13Z"/>
+    <path class="st4" d="M1055,528.4h7.8v7.6c2.1-5.1,6-8.5,12-8.3v8.2h-.4c-6.8,0-11.5,4.4-11.5,13.4v12.9h-7.8v-33.9Z"/>
+    <path class="st4" d="M1078.1,545.4h0c0-9.8,6.9-17.8,16.5-17.8s16.2,8.5,16.2,18.2,0,1.4-.1,2.2h-24.9c.8,5.5,4.7,8.6,9.7,8.6s6.5-1.4,9.2-4l4.6,4c-3.2,3.8-7.6,6.3-13.9,6.3-9.8,0-17.4-7.1-17.4-17.6ZM1103.2,542.9c-.5-5-3.5-8.9-8.6-8.9s-8.1,3.7-8.8,8.9h17.4Z"/>
+    <path class="st4" d="M1142.7,517h7.3l19.8,45.2h-8.3l-4.6-10.8h-21.2l-4.6,10.8h-8.1l19.8-45.2ZM1154,544.4l-7.8-18-7.7,18h15.5Z"/>
+    <path class="st4" d="M1178.1,517.3h7.9v44.9h-7.9v-44.9Z"/>
+  </g>
+  <g>
+    <path class="st3" d="M779.8,567.7l38.7-38.7c1.6-1.6,1.6-4.2,0-5.9l-10.2-10.2c-1.3-1.3-3-2-4.7-2h-53.5c-1.8,0-3.5.7-4.7,2l-10.2,10.2c-1.6,1.6-1.6,4.2,0,5.9l38.7,38.7c1.6,1.6,4.2,1.6,5.9,0Z"/>
+    <path class="st2" d="M745.1,513.3c1.4-1.4,3.4-2,5.3-1.6l67.2,13.7c1.3.3,2,1.7,1.5,2.8.9-1.6.7-3.6-.7-5l-10.2-10.2c-1.3-1.3-3-2-4.7-2h-53.5c-1.8,0-3.5.7-4.7,2l-.3.3Z"/>
+    <path class="st1" d="M804.9,514l-3.9,7.9,16.7,3.4c1.3.3,2,1.7,1.5,2.8.9-1.6.7-3.6-.7-5l-10.2-10.2c-1.3-1.3-3-2-4.7-2h-.5c1.5,0,2.5,1.6,1.8,2.9Z"/>
+    <path class="st0" d="M819.1,528.2c.5-1.1-.1-2.6-1.5-2.8l-16.7-3.4-22.4,45.3c-.6,1.3-2.1,1.8-3.3,1.4,1.5.6,3.3.3,4.5-.9l38.7-38.7c.3-.3.5-.6.7-.9h0Z"/>
+  </g>
+</svg>
+</header>
+
+<main class="tas-main">
+<h1 class="tas-page-title">【合成データ・デモ】広告獲得・購買転換トラッキング</h1>
+<p class="tas-lead">獲得期間 2026-01-01 以上 / 2026-02-01 未満 (Asia/Tokyo)｜購買観測終了 2026-10-20T12:40:00+00:00 未満｜run 1792500000_1</p>
+<blockquote class="tas-callout">全数値は動作確認用の架空データです。実データの集計・TD上のSQL検証は行っていません。</blockquote>
+<section><h2 class="tas-section-title">初回landingコホート</h2><div class="tas-kpis">
+<div class="tas-kpi"><div class="tas-kpi-label">初回観測Cookie</div><div class="tas-kpi-value">200</div><div class="tas-kpi-note">獲得コホートを観測終了まで追跡</div></div>
+<div class="tas-kpi"><div class="tas-kpi-label">会員ID観測Cookie</div><div class="tas-kpi-value">74</div><div class="tas-kpi-note">獲得コホートを観測終了まで追跡</div></div>
+<div class="tas-kpi"><div class="tas-kpi-label">ログイン後購買Cookie</div><div class="tas-kpi-value">21</div><div class="tas-kpi-note">獲得コホートを観測終了まで追跡</div></div>
+<div class="tas-kpi"><div class="tas-kpi-label">ログイン後注文</div><div class="tas-kpi-value">23</div><div class="tas-kpi-note">獲得コホートを観測終了まで追跡</div></div>
+<div class="tas-kpi"><div class="tas-kpi-label">累積購買金額</div><div class="tas-kpi-value">JPY 135,000.00</div><div class="tas-kpi-note">獲得コホートを観測終了まで追跡</div></div>
+<div class="tas-kpi"><div class="tas-kpi-label">獲得コホートROAS</div><div class="tas-kpi-value">—</div><div class="tas-kpi-note">獲得コホートを観測終了まで追跡</div></div>
+</div></section>
+<section><h2 class="tas-section-title">施策別・初回観測Cookie</h2><div class="tas-bars">
+<div class="tas-bar-row"><span style="overflow-wrap:anywhere">検索広告A</span><div class="tas-bar-track"><div class="tas-bar-fill" style="width:100.00%;background:var(--tas-primary-1)"></div></div><span>100</span></div>
+<div class="tas-bar-row"><span style="overflow-wrap:anywhere">SNS広告B</span><div class="tas-bar-track"><div class="tas-bar-fill" style="width:80.00%;background:var(--tas-primary-2)"></div></div><span>80</span></div>
+<div class="tas-bar-row"><span style="overflow-wrap:anywhere">未設定</span><div class="tas-bar-track"><div class="tas-bar-fill" style="width:20.00%;background:var(--tas-secondary-2)"></div></div><span>20</span></div>
+</div></section><section><h2 class="tas-section-title">獲得日・施策別詳細</h2>
+<div style="overflow-x:auto"><table class="tas-table"><thead><tr><th>獲得日</th><th>source</th><th>medium</th><th>campaign</th><th>獲得Cookie</th><th>会員ID観測</th><th>注文</th><th>累積売上</th><th>広告費</th><th>ROAS</th></tr></thead><tbody><tr><td class="">2026-01-01</td><td class="">search</td><td class="">cpc</td><td class="">検索広告A</td><td class="tas-num">100</td><td class="tas-num">40</td><td class="tas-num">12</td><td class="tas-num">JPY 72,000.00</td><td class="tas-num">JPY 30,000.00</td><td class="tas-num">240.0%</td></tr><tr><td class="">2026-01-01</td><td class="">social</td><td class="">paid_social</td><td class="">SNS広告B</td><td class="tas-num">80</td><td class="tas-num">24</td><td class="tas-num">8</td><td class="tas-num">JPY 48,000.00</td><td class="tas-num">JPY 40,000.00</td><td class="tas-num">120.0%</td></tr><tr><td class="">2026-01-01</td><td class="">(direct)</td><td class="">(none)</td><td class="">未設定</td><td class="tas-num">20</td><td class="tas-num">10</td><td class="tas-num">3</td><td class="tas-num">JPY 15,000.00</td><td class="tas-num">—</td><td class="tas-num">—</td></tr></tbody></table></div></section>
+<section><h2 class="tas-section-title">初回session内の流入関連（施策間は非加算）</h2>
+<div style="overflow-x:auto"><table class="tas-table"><thead><tr><th>施策</th><th>関連注文</th><th>関連売上</th></tr></thead><tbody><tr><td class="">検索広告A（初回session内関連）</td><td class="tas-num">12</td><td class="tas-num">JPY 72,000.00</td></tr><tr><td class="">SNS広告B（初回session内関連）</td><td class="tas-num">10</td><td class="tas-num">JPY 60,000.00</td></tr></tbody></table></div></section>
+<section><h2 class="tas-section-title">購入前7日 last-touch（別モデル）</h2>
+<div style="overflow-x:auto"><table class="tas-table"><thead><tr><th>施策</th><th>注文</th><th>売上</th></tr></thead><tbody><tr><td class="">検索広告A（直前流入）</td><td class="tas-num">9</td><td class="tas-num">JPY 54,000.00</td></tr><tr><td class="">メール（直前流入）</td><td class="tas-num">14</td><td class="tas-num">JPY 81,000.00</td></tr></tbody></table></div></section>
+<section><h2 class="tas-section-title">定義と注意事項</h2><ul>
+<li>新規は保持ログ内での初回観測です。Cookieは人物数ではありません。</li>
+<li>会員IDはセッション内MAXで補完し、実際の会員観測以前の注文はログイン後購買に含めません。</li>
+<li>獲得期間と購買観測期間は異なります。累積値の比較にはコホート成熟度を確認してください。</li>
+<li>session_inflowの施策別Cookie・注文・売上は重複を含み、単純合算できません。</li>
+<li>購入前lookbackはsession MAXで会員を遡及補完した別モデルです。初回獲得元の売上と合計しないでください。</li>
+<li>広告費未入力・0円・金額不明・通貨や粒度の不一致ではROASを表示しません。</li>
+</ul><p>Generated with Treasure Work</p></section></main>
+
+<footer class="tas-footer">
+  <span>Prepared by Treasure Data</span>
+  <span>更新日: 2026-10-20</span>
+</footer>
+</body>
+</html>

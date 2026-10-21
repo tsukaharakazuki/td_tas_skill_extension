@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "demo": true,
+  "manifest": {
+    "project_name": "demo",
+    "run_id": "1792500000_1",
+    "attempt_id": 1,
+    "observation_end": 1792500000,
+    "qa_passed": false,
+    "row_counts": {"cohort": 3, "inflow": 2, "lookback": 2}
+  },
+  "qa": {"hard_errors": 0},
+  "cohort": [
+    {"acquisition_date": "2026-01-01", "source": "search", "medium": "cpc", "campaign": "検索広告A", "content": "", "term": "", "currency": "JPY", "acquired_cookies": 100, "logged_cookies": 40, "purchasing_cookies": 10, "orders": 12, "known_sales": 72000, "unpriced_orders": 0, "sales": 72000, "spend": 30000, "roas_pct": 240},
+    {"acquisition_date": "2026-01-01", "source": "social", "medium": "paid_social", "campaign": "SNS広告B", "content": "", "term": "", "currency": "JPY", "acquired_cookies": 80, "logged_cookies": 24, "purchasing_cookies": 8, "orders": 8, "known_sales": 48000, "unpriced_orders": 0, "sales": 48000, "spend": 40000, "roas_pct": 120},
+    {"acquisition_date": "2026-01-01", "source": "(direct)", "medium": "(none)", "campaign": "未設定", "content": "", "term": "", "currency": "JPY", "acquired_cookies": 20, "logged_cookies": 10, "purchasing_cookies": 3, "orders": 3, "known_sales": 15000, "unpriced_orders": 0, "sales": 15000, "spend": null, "roas_pct": null}
+  ],
+  "inflow": [
+    {"label": "検索広告A（初回session内関連）", "acquired_cookies": 100, "orders": 12, "sales": 72000},
+    {"label": "SNS広告B（初回session内関連）", "acquired_cookies": 95, "orders": 10, "sales": 60000}
+  ],
+  "lookback": [
+    {"label": "検索広告A（直前流入）", "orders": 9, "sales": 54000},
+    {"label": "メール（直前流入）", "orders": 14, "sales": 81000}
+  ]
+}

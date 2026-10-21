@@ -1,0 +1,11 @@
+# Deploy SQL, Digdag and compiled params only; keep report artifacts local.
+MEMORY.md
+runs/
+dashboard_output/
+dashboard_template/
+config/project.json
+*.zip
+*.xlsx
+*.csv
+*.log
+.DS_Store

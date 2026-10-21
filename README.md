@@ -14,3 +14,4 @@ Treasure Data / Treasure AI Studio 向けの Claude スキル・プラグイン�
 | フォルダ | 内容 |
 |---|---|
 | [td-skills-compact](./td-skills-compact) | Claude Desktopにドラッグ&ドロップで追加できるTD向けSkill 23個(SQL / tdx / Workflow) |
+| [td-ad-purchase-analytics](./td-ad-purchase-analytics) | 広告からの新規Cookie獲得・会員化・長期購買を追跡し、TD WorkflowとブランドHTMLダッシュボードを構築するSkill |

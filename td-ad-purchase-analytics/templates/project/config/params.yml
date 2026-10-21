@@ -1,0 +1,19 @@
+# config/project.jsonを確認してから validate_project.py --compile-config で生成する。
+configuration_reviewed: false
+config_sha256: REPLACE_ME
+td:
+  database: REPLACE_ME
+  engine: presto
+table_prefix: apa
+web_table: REPLACE_ME.web_logs
+purchase_mode: web
+ad_costs_enabled: false
+refresh_strategy: full_retained_history
+session_mode: window
+session_timeout_seconds: 1800
+lookback_days: 7
+report_start: '2026-01-01'
+report_end: '2026-02-01'
+report_timezone: Asia/Tokyo
+currency: JPY
+internal_hosts_sql: "('example.com','www.example.com')"
