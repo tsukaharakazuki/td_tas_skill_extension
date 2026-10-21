@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="855.70 451.10 208.50 177.70">
+  <!-- Generator: Adobe Illustrator 30.2.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 1)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#linear-gradient3);
+      }
+
+      .st1 {
+        fill: url(#linear-gradient2);
+        opacity: .6;
+      }
+
+      .st2 {
+        fill: url(#linear-gradient1);
+        opacity: .4;
+      }
+
+      .st3 {
+        fill: url(#linear-gradient);
+      }
+
+      .st4 {
+        fill: #2e40aa;
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="908.8" y1="531.7" x2="998.6" y2="441.8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff86b4"/>
+      <stop offset="0" stop-color="#fa84b7"/>
+      <stop offset=".2" stop-color="#c572dd"/>
+      <stop offset=".3" stop-color="#a468f5"/>
+      <stop offset=".3" stop-color="#9864ff"/>
+      <stop offset=".4" stop-color="#8470ff"/>
+      <stop offset=".7" stop-color="#3d9cff"/>
+      <stop offset=".9" stop-color="#11b8ff"/>
+      <stop offset="1" stop-color="#00c3ff"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient1" x1="970.1" y1="470.5" x2="970.1" y2="441" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset=".9" stop-color="#00baff"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient2" x1="1003.5" y1="468.7" x2="1053.2" y2="468.7" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset=".9" stop-color="#30c4ff"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient3" x1="966.8" y1="512.8" x2="1026.3" y2="523.9" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7b32dc"/>
+      <stop offset="1" stop-color="#32bdff"/>
+    </linearGradient>
+  </defs>
+  <g id="Stacked">
+    <g>
+      <path class="st3" d="M965.3,556l70.2-70.2c2.9-2.9,2.9-7.7,0-10.6l-18.4-18.4c-2.3-2.3-5.4-3.6-8.6-3.6h-97c-3.2,0-6.3,1.3-8.6,3.6l-18.4,18.4c-2.9,2.9-2.9,7.7,0,10.6l70.2,70.2c2.9,2.9,7.7,2.9,10.6,0Z"/>
+      <path class="st2" d="M902.4,457.2c2.5-2.5,6.2-3.6,9.7-2.9l121.9,24.8c2.4.5,3.6,3.1,2.7,5.1,1.7-2.9,1.3-6.6-1.2-9.1l-18.4-18.4c-2.3-2.3-5.4-3.6-8.6-3.6h-97c-3.2,0-6.3,1.3-8.6,3.6l-.5.5Z"/>
+      <path class="st1" d="M1010.9,458.5l-7.1,14.4,30.3,6.2c2.4.5,3.6,3.1,2.7,5.1,1.7-2.9,1.3-6.6-1.2-9.1l-18.4-18.4c-2.3-2.3-5.4-3.6-8.6-3.6h-.9c2.7,0,4.5,2.9,3.3,5.3Z"/>
+      <path class="st0" d="M1036.7,484.2c.9-2.1-.2-4.6-2.7-5.1l-30.3-6.2-40.6,82.1c-1.1,2.3-3.7,3.3-6,2.6,2.7,1.1,6,.6,8.2-1.6l70.2-70.2c.5-.5.9-1,1.2-1.6h0Z"/>
+    </g>
+  </g>
+  <g>
+    <path class="st4" d="M866.4,603.6h-8.7v-4.4h22.1v4.4h-8.7v22.8h-4.8v-22.8Z"/>
+    <path class="st4" d="M880.3,605.9h4.7v4.6c1.3-3.1,3.6-5.2,7.3-5v5h-.3c-4.1,0-7,2.7-7,8.1v7.8h-4.7v-20.5Z"/>
+    <path class="st4" d="M894.4,616.2h0c0-5.9,4.2-10.8,10-10.8s9.8,5.1,9.8,11,0,.9,0,1.3h-15.1c.5,3.3,2.9,5.2,5.9,5.2s3.9-.9,5.6-2.4l2.8,2.4c-1.9,2.3-4.6,3.8-8.4,3.8-5.9,0-10.5-4.3-10.5-10.6ZM909.5,614.7c-.3-3-2.1-5.4-5.2-5.4s-4.9,2.2-5.3,5.4h10.5Z"/>
+    <path class="st4" d="M916.9,620.5h0c0-4.5,3.5-6.7,8.5-6.7s3.9.3,5.5.9v-.5c0-2.9-1.8-4.5-5.1-4.5s-4,.5-5.9,1.3l-1.3-3.7c2.3-1,4.5-1.7,7.8-1.7s5.4.8,6.8,2.3c1.5,1.5,2.2,3.6,2.2,6.3v12.2h-4.6v-2.6c-1.4,1.7-3.5,3-6.7,3s-7.3-2.2-7.3-6.3ZM931,619v-1.4c-1.2-.5-2.8-.8-4.7-.8-3,0-4.8,1.3-4.8,3.4h0c0,2.1,1.7,3.2,4,3.2s5.5-1.8,5.5-4.4Z"/>
+    <path class="st4" d="M938.9,623.7l2.1-3.2c2.3,1.7,4.6,2.5,6.7,2.5s3.2-.9,3.2-2.2h0c0-1.7-2.2-2.2-4.6-3-3-.9-6.4-2.1-6.4-6h0c0-4,3.2-6.4,7.3-6.4s5.4.9,7.5,2.3l-1.9,3.3c-2-1.2-4.1-1.9-5.8-1.9s-2.9.9-2.9,2h0c0,1.6,2.2,2.2,4.6,3,3,.9,6.4,2.3,6.4,6h0c0,4.4-3.3,6.5-7.6,6.5s-6.1-1-8.7-3.1Z"/>
+    <path class="st4" d="M959.1,618.9v-13h4.7v11.6c0,3.2,1.6,5,4.4,5s4.6-1.9,4.6-5v-11.6h4.7v20.5h-4.7v-3.2c-1.3,1.9-3.2,3.6-6.4,3.6-4.6,0-7.3-3.1-7.3-7.9Z"/>
+    <path class="st4" d="M982.9,605.9h4.7v4.6c1.3-3.1,3.6-5.2,7.3-5v5h-.3c-4.1,0-7,2.7-7,8.1v7.8h-4.7v-20.5Z"/>
+    <path class="st4" d="M996.9,616.2h0c0-5.9,4.2-10.8,10-10.8s9.8,5.1,9.8,11,0,.9,0,1.3h-15.1c.5,3.3,2.9,5.2,5.9,5.2s3.9-.9,5.6-2.4l2.8,2.4c-1.9,2.3-4.6,3.8-8.4,3.8-5.9,0-10.5-4.3-10.5-10.6ZM1012.1,614.7c-.3-3-2.1-5.4-5.2-5.4s-4.9,2.2-5.3,5.4h10.5Z"/>
+    <path class="st4" d="M1036,599h4.4l12,27.4h-5l-2.8-6.6h-12.9l-2.8,6.6h-4.9l12-27.4ZM1042.9,615.6l-4.7-10.9-4.7,10.9h9.4Z"/>
+    <path class="st4" d="M1057.4,599.2h4.8v27.2h-4.8v-27.2Z"/>
+  </g>
+</svg>

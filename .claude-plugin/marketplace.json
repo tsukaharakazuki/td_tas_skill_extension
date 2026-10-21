@@ -5,7 +5,7 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.10.0",
+    "version": "1.11.0",
     "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, and CRM PDCA automation"
   },
   "plugins": [
@@ -106,6 +106,15 @@
       "strict": false,
       "skills": [
         "./td-crm-pdca-automation"
+      ]
+    },
+    {
+      "name": "td-tas-dashboard-template",
+      "description": "Use when creating or styling an HTML report or dashboard for Treasure AI Studio, or when another skill outputs HTML that should carry Treasure AI branding. Applies the brand palette, Manrope and Inter typography, the official logo, and a Prepared by Treasure Data credit. Triggers on phrases like 'ダッシュボードを作って', 'HTMLレポート', 'ブランドに合わせて', 'ロゴを入れて', 'カラーパレット', 'Treasure AIっぽく'.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./td-tas-dashboard-template"
       ]
     }
   ]
