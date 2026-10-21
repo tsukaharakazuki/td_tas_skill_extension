@@ -1,0 +1,27 @@
+{
+  "configured": false,
+  "project_name": "REPLACE_ME",
+  "output_database": "REPLACE_ME",
+  "table_prefix": "apa",
+  "web_table": "REPLACE_ME.web_logs",
+  "purchase_mode": "web",
+  "session_mode": "window",
+  "session_timeout_seconds": 1800,
+  "lookback_days": 7,
+  "report_start": "2026-01-01",
+  "report_end": "2026-02-01",
+  "timezone": "Asia/Tokyo",
+  "currency": "JPY",
+  "internal_hosts": ["example.com", "www.example.com"],
+  "ad_costs_enabled": false,
+  "identity_observation_label": "会員ID観測",
+  "refresh_strategy": "full_retained_history",
+  "dashboard_template": {
+    "repository": "https://github.com/tsukaharakazuki/td_tas_skill_extension/tree/main/td-tas-dashboard-template",
+    "commit": "7d087a31a2625341a6d5811d149fd633859bda32",
+    "sha256": "f6f72d7512ea389d03ec09a31f7d1e034f6737395b7a81ebf4c4cabdc0111ef2"
+  },
+  "extra_metrics": [],
+  "decisions": [],
+  "known_limitations": ["新規は保持ログ内の初回観測Cookie", "Cookieは人物UUではない", "累積購買はコホートの観測期間で変わる"]
+}

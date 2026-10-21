@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env*
+/Project/
+templates/project/runs/
+templates/project/dashboard_output/runs/
+templates/project/dashboard_output/index.html

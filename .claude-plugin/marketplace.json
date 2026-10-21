@@ -5,8 +5,8 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.11.0",
-    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, and CRM PDCA automation"
+    "version": "1.12.0",
+    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, CRM PDCA automation, and ad acquisition/purchase analytics"
   },
   "plugins": [
     {
@@ -115,6 +115,15 @@
       "strict": false,
       "skills": [
         "./td-tas-dashboard-template"
+      ]
+    },
+    {
+      "name": "td-ad-purchase-analytics",
+      "description": "Use when the user wants long-term ad acquisition and purchase analytics from TD JS SDK web logs, including 広告獲得分析, 新規Cookie, 会員化分析, 購買転換, ROAS, 購入前7日流入, or td-ad-purchase-analytics. Builds project-specific TD Workflows and TD-branded dashboards with sessionization, session MAX member enrichment, canonical order attribution, optional ad spend, and QA-gated updates.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./td-ad-purchase-analytics"
       ]
     }
   ]

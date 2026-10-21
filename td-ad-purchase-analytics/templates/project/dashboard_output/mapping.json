@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "title": "広告獲得・購買転換トラッキング",
+  "default_mode": "landing",
+  "marts": {
+    "cohort": "{database}.{prefix}_cohort_{run_id}",
+    "inflow": "{database}.{prefix}_inflow_{run_id}",
+    "lookback": "{database}.{prefix}_lookback_{run_id}",
+    "qa": "{database}.{prefix}_qa_{run_id}",
+    "complete": "{database}.{prefix}_complete_{run_id}"
+  },
+  "kpis": [
+    {"field": "acquired_cookies", "label": "初回観測Cookie", "format": "integer"},
+    {"field": "logged_cookies", "label": "会員ID観測Cookie", "format": "integer"},
+    {"field": "purchasing_cookies", "label": "ログイン後購買Cookie", "format": "integer"},
+    {"field": "orders", "label": "ログイン後注文", "format": "integer"},
+    {"field": "sales", "label": "累積購買金額", "format": "money"},
+    {"field": "roas_pct", "label": "獲得コホートROAS", "format": "percent"}
+  ],
+  "table_columns": [
+    {"field": "acquisition_date", "label": "獲得日", "format": "text"},
+    {"field": "source", "label": "source", "format": "text"},
+    {"field": "medium", "label": "medium", "format": "text"},
+    {"field": "campaign", "label": "campaign", "format": "text"},
+    {"field": "acquired_cookies", "label": "獲得Cookie", "format": "integer"},
+    {"field": "logged_cookies", "label": "会員ID観測", "format": "integer"},
+    {"field": "orders", "label": "注文", "format": "integer"},
+    {"field": "sales", "label": "累積売上", "format": "money"},
+    {"field": "spend", "label": "広告費", "format": "money"},
+    {"field": "roas_pct", "label": "ROAS", "format": "percent"}
+  ],
+  "bars": {"dimension": "campaign", "metric": "acquired_cookies", "label": "施策別・初回観測Cookie"},
+  "notes": [
+    "新規は保持ログ内での初回観測です。Cookieは人物数ではありません。",
+    "会員IDはセッション内MAXで補完し、実際の会員観測以前の注文はログイン後購買に含めません。",
+    "獲得期間と購買観測期間は異なります。累積値の比較にはコホート成熟度を確認してください。",
+    "session_inflowの施策別Cookie・注文・売上は重複を含み、単純合算できません。",
+    "購入前lookbackはsession MAXで会員を遡及補完した別モデルです。初回獲得元の売上と合計しないでください。",
+    "広告費未入力・0円・金額不明・通貨や粒度の不一致ではROASを表示しません。"
+  ]
+}
