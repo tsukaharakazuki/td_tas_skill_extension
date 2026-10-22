@@ -33,7 +33,7 @@ mkdir pkg && cd pkg
 printf '{ "name": "tdx-bundle", "version": "%s", "private": true }\n' "$VER" > package.json
 
 echo "== 1. インストール（@treasuredata/tdx@$VER, scripts 無効, optional 除外）"
-npm install "${REG_ARGS[@]}" --save-exact --ignore-scripts --omit=optional \
+npm install ${REG_ARGS[@]+"${REG_ARGS[@]}"} --save-exact --ignore-scripts --omit=optional \
   --no-fund --no-audit "@treasuredata/tdx@$VER"
 
 echo "== 2. レジストリ署名の検証"
@@ -41,12 +41,12 @@ if [ "${SKIP_SIGNATURE_CHECK:-0}" = 1 ]; then
   echo "!! SKIP_SIGNATURE_CHECK=1 のため署名検証を省略しました。審査用の一式には使わないでください" | tee signature-check.txt
 else
   # 署名の取得に registry.npmjs.org と tuf-repo-cdn.sigstore.dev への到達が必要（この端末だけ）
-  npm audit signatures "${REG_ARGS[@]}" 2>&1 | tee signature-check.txt
+  npm audit signatures ${REG_ARGS[@]+"${REG_ARGS[@]}"} 2>&1 | tee signature-check.txt
   [ "${PIPESTATUS[0]}" = 0 ] || { echo "署名検証に失敗しました。一式は作りません"; exit 1; }
 fi
 
 echo "== 3. 脆弱性レポートと SBOM"
-npm audit "${REG_ARGS[@]}" --omit=dev > audit-report.txt 2>&1 || true
+npm audit ${REG_ARGS[@]+"${REG_ARGS[@]}"} --omit=dev > audit-report.txt 2>&1 || true
 npm sbom --sbom-format cyclonedx > sbom.cdx.json 2>/dev/null || echo "（npm sbom は npm 10.1 以降で利用可）"
 find node_modules -name '*.node' -print > native-modules.txt || true
 

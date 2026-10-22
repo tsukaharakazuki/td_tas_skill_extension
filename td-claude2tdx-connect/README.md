@@ -211,6 +211,24 @@ NPM_REGISTRY=https://npm.example.co.jp/ ./scripts/build-tdx-bundle.sh 2026.9.0 ~
 | `tdx-bundle-<ver>.sbom.cdx.json` | SBOM |
 | `tdx-bundle-<ver>.audit.txt` / `.signatures.txt` | 脆弱性レポート / 署名検証結果 |
 
+### お客様に配布するキットを作る
+
+npm を許可できないお客様には、一式と導入に必要なファイルをまとめた zip を渡すと、置くだけで接続設定に進めます。リポジトリのクローン先で実行します。
+
+```bash
+bash td-claude2tdx-connect/scripts/make-customer-kit.sh 2026.9.0 ~/Desktop
+```
+
+`td-connect-kit-<ver>.zip` ができます。
+
+| zip の中身 | 用途 |
+|---|---|
+| `TreasureAI/` | そのまま置く作業フォルダ。一式と `.sha256`、`setup-tdx.sh`、`tdx-guard.sh`、`td-api.sh`、空の `tdx_key.txt` |
+| `README.txt` | お客様向けの手順（`scripts/README.customer.txt` から生成。メモ帳で読めるよう CRLF） |
+| `review/` | セキュリティ審査用の lockfile・SBOM・脆弱性レポート・署名検証結果 |
+
+お客様の PC が Windows でも使えます。tdx とスクリプトは Claude のセッション側（Linux）で動き、PC のフォルダはそこに接続されるだけです。お客様の作業は、zip を展開して `tdx_key.txt` にキーを書き、Claude アプリでフォルダを追加して「TDに繋ぎたい」と話しかけるだけです。
+
 ---
 
 ## セキュリティ審査向けの情報
@@ -279,6 +297,8 @@ source setup-tdx.sh && tdx --site "$TDX_SITE" databases
 | `tdx-guard.sh` | 操作範囲のガード。`--check <tdx の引数>` で判定だけ確認できる |
 | `td-api.sh` | プラン D の curl クライアント |
 | `scripts/build-tdx-bundle.sh` | プラン C の一式を作る（管理端末で実行） |
+| `scripts/make-customer-kit.sh` | プラン C の一式をお客様配布用の zip にまとめる（管理端末で実行） |
+| `scripts/README.customer.txt` | 配布キットに入れるお客様向け手順 |
 | `references/tdx-commands.md` | tdx のコマンド早見、クエリの流儀 |
 | `references/troubleshooting.md` | 症状別の対処 |
 
