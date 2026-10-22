@@ -54,8 +54,16 @@ Hiveのcreate_tableと両engineのinsert_intoでは、operatorがAPIで表の存
 
 ## 3. WITHと -- DIGDAG_INSERT_LINE
 
-このコメントは`td>`の出力SQL挿入位置を指定する。SQLを解析して自動でCTEの末尾へ移す機能ではない。
-出力指定がないSQLではただのコメント。
+`-- DIGDAG_INSERT_LINE`は、`td>`の`create_table` / `insert_into`が出力SQLを挿入する位置を示すコメントです。SQLを解析してCTEの末尾を探す機能ではありません。出力指定がない実行（コンソール実行を含む）ではただのコメントです。
+
+### 必要なケース
+
+| 実行場所 | エンジン | WITH | マーカー |
+| --- | --- | --- | --- |
+| コンソール | 問わない | 問わない | 不要 |
+| WF（`td>`で出力） | Hive | あり | **必須**。CTEの後、最後のSELECTの直前 |
+| WF（`td>`で出力） | Hive | なし | 不要（想定。実機未確認） |
+| WF（`td>`で出力） | Trino | 問わない | 不要。書く場合はWITHの前 |
 
 ### Hive: CTEの後、最後のSELECTの直前
 
@@ -80,7 +88,7 @@ SELECT user_id FROM src
 insert_intoなら中間行が`INSERT INTO TABLE result`になる。
 **WITHから最後のSELECTまで一つの文**なので、CTEとマーカーの間に`;`を置かない。
 TD自身が`WITH ... INSERT ... SELECT`を文書化している [W2]。
-マーカーなしで前置すると`INSERT ... WITH ...`となり、この構造と異なる。
+マーカーがないと、出力文がSQLの先頭に置かれ、`INSERT ... WITH ...`の形になると想定される（失敗の原因になり得る。実機未確認）。このため、Hive×WITHのWFではマーカーを必須とする。
 
 ### Trino / presto: WITHの前
 
@@ -105,17 +113,18 @@ SELECT user_id FROM src
 
 insert_intoなら`INSERT INTO result WITH ... SELECT ...`。
 TrinoのINSERT / CTASは、その後ろにWITH付きqueryを置く構文 [W3]。
-Trinoでは既定の前置位置で動作する場合もあり、全WITHでマーカー必須とは言わない。
-**Hive用のCTE後マーカーを、そのままTrinoへ持ち込まない**。
+Trinoではマーカーなしでも出力文がSQLの先頭に置かれるため、マーカーは不要です（想定。実機未確認）。
+**Hive用のCTE後マーカーをTrinoへ持ち込まない**。CTEの後に`CREATE TABLE ... AS`が入り、構文が成立しません。
 
 ### マーカーの書式
 
 - 安全な規約として、**列1から、単独行に、正確に`-- DIGDAG_INSERT_LINE`を一度だけ**書く。
-- inspected upstream実装は改行または先頭直後の`--`を探し、最初のmatchだけを置換する [W1]。
+- 上流実装は行頭の`--`を探し、最初に一致したマーカーだけを置換する [W1]。
   行頭に空白を入れたものや、コード末尾のコメントを同じものとみなさない。
-- 実装はSQL parserではない。文字列やblock comment中の同名テキストも避ける。
-- checkerは文字列・block comment内を「有効なマーカー」とは扱わないが、
-  実operatorの文字列置換がそれらを必ず安全に無視するという保証ではない。
+- 上流の置換は行頭の一致だけを見て、SQLの構文（文字列・block comment）を区別しない [W1]。
+  block comment内の行頭に同名の行を書くと、意図せず置換される可能性がある。
+  そのため、文字列・コメントの中に`DIGDAG_INSERT_LINE`を書かない。
+- checkerは文字列・block comment内の同名テキストを有効なマーカーとしない。ただし、これは検査ツールの規則で、実行時の置換が同じ動作をする保証はない。
 - SQLファイル先頭コメント、複数statement、自前DDLのある場合は展開後SQLまで読む。
 
 ## 4. 設定・include・展開

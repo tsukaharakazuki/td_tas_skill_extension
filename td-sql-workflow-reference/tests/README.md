@@ -61,8 +61,9 @@ an assumption that all such casts are invalid or always truncate fractions.
   `DIGDAG_INSERT_LINE` (horizontal whitespace around the body is allowed).
   Indentation, inline comments, extra trailing text, strings and block comments
   do not count. Duplicate active markers warn in all modes; placement checks
-  apply only to create-table/insert-into. Trino placement after `WITH` is review
-  only, not parser-guaranteed.
+  apply only to create-table/insert-into. A Hive statement with a leading `WITH`
+  needs an active marker in those modes; standalone (Console) runs do not.
+  Trino placement after `WITH` is review only, not parser-guaranteed.
 - The lexer models common Hive single/double-quoted strings with backslash
   escapes and common Trino single-quoted strings with doubled quotes. Raw token
   text is preserved: escapes are used to locate boundaries, never decoded.

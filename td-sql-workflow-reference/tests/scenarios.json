@@ -34,7 +34,7 @@
     {
       "id": "with-output-marker",
       "request": "WITHのSELECTはConsoleで通るがtd> create_tableで失敗する",
-      "must": ["identify engine and output option", "inspect expanded DDL or DML", "place marker according to engine and output type", "detect duplicate CREATE or INSERT", "do not say all WITH queries need identical marker placement"]
+      "must": ["identify engine and output option", "confirm the run is a Workflow td> output rather than a Console run", "for Hive with WITH require the marker after the CTE and before the final SELECT", "for Trino leave the marker out or keep it before WITH", "inspect expanded DDL or DML", "detect duplicate CREATE or INSERT", "do not require the marker for Console runs"]
     },
     {
       "id": "retry-side-effects",

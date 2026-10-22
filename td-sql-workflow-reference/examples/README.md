@@ -24,6 +24,7 @@
 SHAのASCII例は、JSON配列と連結文字列の互換性を証明するものではありません。
 
 利用可能な読み取りquery toolで、SQLに記したengineを指定してください。
+これらはコンソール実行用なので、`DIGDAG_INSERT_LINE`は不要です。WFの出力タスクで使う場合は、HiveのWITHにマーカーを追加してください。
 CLIの実構文・アカウントはその環境で確認します。アカウント / profileを勝手に切り替えません。
 小さなSELECTでもremote jobであることを意識し、実行結果とengine版を記録します。
 
@@ -49,7 +50,7 @@ flagをtrueにした場合、定数1行の出力を2テーブルに作成する�
 | hive_result | hive | `<config.database>.qa_sql_reference_hive` | 表を確保してINSERT OVERWRITE |
 
 スキーマ・time・保持方針を対象環境で確認してください。
-両例は一つのWITH文で、TrinoはWITH前、HiveはCTE後にマーカーがあります。
+両例は一つのWITH文です。Hiveは出力タスクでマーカーが必須で、CTEの後に置きます。Trinoのマーカーは任意で、置く場合はWITHの前に置きます。
 `insert_into`の形も説明用に使えますが、変更するとappendとなり、再実行で重複し得ます。
 
 ### 安全な確認順

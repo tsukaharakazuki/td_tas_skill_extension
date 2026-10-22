@@ -1,5 +1,6 @@
 -- Used with td> engine: hive and create_table (or insert_into).
--- The write prefix belongs AFTER the CTE and BEFORE the final SELECT.
+-- Required on Hive when a WITH is present in a Workflow output task.
+-- The marker belongs AFTER the CTE and BEFORE the final SELECT.
 WITH samples AS (
   SELECT 'a.b' AS sample_text
 )
