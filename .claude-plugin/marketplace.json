@@ -5,8 +5,8 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.12.0",
-    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, CRM PDCA automation, and ad acquisition/purchase analytics"
+    "version": "1.13.0",
+    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, CRM PDCA automation, ad acquisition/purchase analytics, and unified TD SQL/Workflow reference"
   },
   "plugins": [
     {
@@ -124,6 +124,15 @@
       "strict": false,
       "skills": [
         "./td-ad-purchase-analytics"
+      ]
+    },
+    {
+      "name": "td-sql-workflow-reference",
+      "description": "Use when creating, reviewing, fixing, or optimizing Treasure Data SQL and Digdag Workflows. Unifies Trino/Hive dialect migration, TD UDFs, time partition pruning, memory-error diagnosis, td> output insertion, semantic QA, and read-only offline risk checks. Triggers on TD SQL作成, WFデバッグ, TrinoからHiveへ移行, メモリエラー, 正規表現, CAST, and DIGDAG_INSERT_LINE.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./td-sql-workflow-reference"
       ]
     }
   ]
