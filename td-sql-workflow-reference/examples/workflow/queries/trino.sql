@@ -1,5 +1,5 @@
 -- Used with td> engine: presto and create_table (or insert_into).
--- The write prefix belongs BEFORE WITH.
+-- The marker is optional on Trino. If you keep it, it must stay BEFORE WITH.
 -- DIGDAG_INSERT_LINE
 WITH samples AS (
   SELECT 'a.b' AS sample_text

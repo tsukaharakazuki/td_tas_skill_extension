@@ -1,4 +1,7 @@
--- Read-only smoke query. Intended engine: TD Hive.
+-- Read-only smoke query for the Console. Intended engine: TD Hive.
+-- No DIGDAG_INSERT_LINE marker is needed here because this runs without an output option.
+-- If you use this SQL in a Workflow td> task with create_table or insert_into,
+-- add a line containing only "-- DIGDAG_INSERT_LINE" between the CTE and the final SELECT.
 -- Expected: a.b => true, axb => false; wide_id => 2147483648.
 -- Expected abc_hash => ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad.
 -- The source SQL below contains two backslashes before the dot.
