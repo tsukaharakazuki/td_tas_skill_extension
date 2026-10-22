@@ -57,6 +57,7 @@ SQLの修正に加えて、`.dig`の`engine`、出力方式、テンプレート
 4. 修正前後のSQL、`.dig`、出力スキーマを対にする。元ファイルを無断で上書きしない。
 5. [意味互換・QA](references/validation.md)の境界データと集計比較を用意する。
 6. 実行済み・未実行・未確認を明確に分ける。静的チェックを実機成功と表現しない。
+7. WFを再実行する場合は、修正範囲で Skip Previously Successful Tasks / NewRun / コメントアウトを選ぶ。手順は[WFの再実行の選び方](references/debugging.md)を参照する。
 
 ### 優先して止める誤変換
 
