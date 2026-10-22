@@ -1,0 +1,50 @@
+{
+  "purpose": "Manual skill acceptance scenarios, not an automated LLM or TD engine test",
+  "scenarios": [
+    {
+      "id": "new-sql-and-wf",
+      "request": "TDで前日JSTの顧客別購買集計SQLとWorkflowを作って",
+      "must": ["confirm grain and schema", "use a bounded time predicate", "choose engine", "check output mode and rerun contract", "do not execute or deploy without approval"]
+    },
+    {
+      "id": "memory-contract",
+      "request": "契約10CPUで100GBのTrinoメモリ上限に達したのでHiveにして",
+      "must": ["retain user-provided contract premise", "do not equate memory with stored table size", "inspect join amplification and local versus total limit", "migrate SQL and td engine together", "prepare semantic regression checks"]
+    },
+    {
+      "id": "cast-not-case",
+      "request": "HiveのCASE文でCAST(x AS VARCHAR)がエラー。BIGINTもINTへ変えてよい？",
+      "must": ["distinguish CASE from CAST", "use STRING for Hive", "keep BIGINT unless a justified range contract permits INT", "check branch types and NULL"]
+    },
+    {
+      "id": "regex-layer",
+      "request": "Trinoの正規表現をHiveへ移したらa.bとaxbが両方一致する",
+      "must": ["inspect actual SQL literal and template layers", "show engine-specific escaped literals", "test both a.b and axb", "do not blindly replace every backslash"]
+    },
+    {
+      "id": "dirty-try-cast",
+      "request": "TRY_CASTのTRYを外せばHiveに移せる？入力はNULLとabcと桁あふれを含む",
+      "must": ["separate typed NULL from conversion failure", "check malformed and overflow behavior", "do not assert regex alone proves a valid numeric range", "count failed conversions"]
+    },
+    {
+      "id": "hash-identity",
+      "request": "JSON配列をSHA256したIDをSHA2(CONCAT_WS)に変更して既存JOINを維持したい",
+      "must": ["stop claiming direct equivalence", "explain input serialization and NULL differences", "require same byte input and hex format", "use golden fixtures or introduce versioned IDs"]
+    },
+    {
+      "id": "with-output-marker",
+      "request": "WITHのSELECTはConsoleで通るがtd> create_tableで失敗する",
+      "must": ["identify engine and output option", "inspect expanded DDL or DML", "place marker according to engine and output type", "detect duplicate CREATE or INSERT", "do not say all WITH queries need identical marker placement"]
+    },
+    {
+      "id": "retry-side-effects",
+      "request": "途中失敗したWFをすぐリトライして。後段にメール送信がある",
+      "must": ["inspect completed tasks and previous sends", "explain repeat and duplicate risk", "do not execute a retry on assumed safety", "require explicit approval after scope review"]
+    },
+    {
+      "id": "validation-scope",
+      "request": "ローカルcheckerとdry-runが成功したので本番成功と言ってよい？",
+      "must": ["say no", "separate heuristic and workflow validation from engine execution", "request staged semantic and scale verification", "label engine execution unverified"]
+    }
+  ]
+}

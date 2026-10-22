@@ -1,0 +1,25 @@
+timezone: Asia/Tokyo
+
+_export:
+  config:
+    !include : config/common.yml
+
++show_effective_config:
+  echo>: "example_writes=${config.allow_example_writes}, database=${config.database}"
+
++optional_writes:
+  if>: ${config.allow_example_writes}
+  _do:
+    +trino_result:
+      td>: queries/trino.sql
+      database: ${config.database}
+      engine: presto
+      create_table: qa_sql_reference_trino
+
+    +hive_result:
+      td>: queries/hive.sql
+      database: ${config.database}
+      engine: hive
+      create_table: qa_sql_reference_hive
+  _else:
+    echo>: "Writes are disabled. Read examples/README.md before enabling."

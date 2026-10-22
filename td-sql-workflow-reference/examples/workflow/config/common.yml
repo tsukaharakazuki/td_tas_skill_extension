@@ -1,0 +1,4 @@
+# Keep false until the output scope has been reviewed and execution approved.
+allow_example_writes: false
+# Replace with a dedicated, isolated QA database. Do not point at production.
+database: replace_with_isolated_qa_db

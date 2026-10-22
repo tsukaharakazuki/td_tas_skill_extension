@@ -1,0 +1,26 @@
+{
+  "validation_status": "expected values only; not executed on TD engines",
+  "order": "unspecified",
+  "rows": [
+    {
+      "s": "a.b",
+      "has_literal_dot": true,
+      "wide_id": 2147483648,
+      "nullable_amount": null,
+      "abc_hash": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    },
+    {
+      "s": "axb",
+      "has_literal_dot": false,
+      "wide_id": 2147483648,
+      "nullable_amount": null,
+      "abc_hash": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    }
+  ],
+  "checks": [
+    "literal dot does not match axb",
+    "BIGINT has not narrowed to 32-bit INT",
+    "DECIMAL(18,2) NULL is explicitly typed",
+    "only identical abc input bytes are compared for SHA-256, not JSON and concatenation"
+  ]
+}
