@@ -1,0 +1,5 @@
+# 認証情報・変換結果・進捗は入れない
+.env
+excel_to_td/
+upload_progress_*.json
+__pycache__/

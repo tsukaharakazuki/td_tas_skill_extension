@@ -5,7 +5,7 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.13.0",
+    "version": "1.14.0",
     "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, CRM PDCA automation, ad acquisition/purchase analytics, and unified TD SQL/Workflow reference"
   },
   "plugins": [
@@ -29,7 +29,7 @@
     },
     {
       "name": "excel-to-td-upload",
-      "description": "Use when the user wants to upload an Excel file (.xlsx) with multiple sheets to Treasure Data (TD). Handles multi-sheet files, Japanese column name translation, and TD naming conventions.",
+      "description": "Use when the user wants to upload an Excel file (.xlsx) to Treasure Data (TD), or split it into per-sheet CSV files in a folder for later upload. Two separable phases: Excel → CSV + manifest with per-sheet confirmation and trailing-note cutoff, then CSV → TD via the Bulk Import API (fast, safe overwrite via swap, resumable). Handles Japanese → English table/column naming and TD naming conventions. Standard-library Python only.",
       "source": "./",
       "strict": false,
       "skills": [

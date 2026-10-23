@@ -1,489 +1,262 @@
 ---
 name: excel-to-td-upload
-description: 'Use when the user wants to upload an Excel file (.xlsx) with multiple sheets to Treasure Data (TD). Triggers on: ExcelをTDにアップロード, ExcelをTreasure Dataに取り込む, スプレッドシートをTDに, エクセルをインポート, シートごとにテーブルに, Excel upload to TD, upload Excel to Treasure Data, or any request to import a multi-sheet Excel file into a TD database/table.'
+description: 'Use when the user wants to upload an Excel file (.xlsx) with one or more sheets to Treasure Data (TD), or to split an Excel file into per-sheet CSV files saved in a project folder for later upload. Two phases that can run separately: (1) Excel → CSV + manifest.json in a folder, with per-sheet confirmation, trailing-note cutoff after 20 consecutive blank rows, and Japanese → English table/column naming; (2) CSV → TD via the Bulk Import API (fast for large data, overwrite via temp table + swap, resumable). Standard-library Python only. Triggers on: ExcelをTDにアップロード, ExcelをTreasure Dataに取り込む, エクセルをインポート, シートごとにテーブルに, ExcelをCSVに分解, CSVをTDにアップロード, 大きいExcelの取り込みが遅い, Excel upload to TD, upload Excel to Treasure Data.'
 ---
 
 # Excel → Treasure Data Upload
 
-ExcelファイルをTreasure Dataにアップロードする対話型ウィザード。シートごとのテーブル分割、日本語→英語変換、カラム名正規化を自動で行う。
+Excel をシートごとの CSV に分解してフォルダに保存し（フェーズA）、その CSV を Bulk Import API で TD に取り込む（フェーズB）。2つのフェーズは別々に実行できる。
 
-**前提環境**: Treasure AI Studio（TAS）。`tdx` CLI と OAuth Bearer Token を使用する。`td` CLI・`pip install`・外部PyPIは利用不可。
+**前提環境**: Treasure AI Studio（TAS）。Python 標準ライブラリだけで動く（`pip install`・`openpyxl`・`td` CLI は不要）。
+
+| スクリプト | 役割 | TD への書き込み |
+|---|---|---|
+| `scripts/excel_to_csv.py` | Excel → `<テーブル名>.csv` + `manifest.json` | なし |
+| `scripts/csv_to_td.py` | CSV + `manifest.json` → TD（Bulk Import API） | `--execute` を付けたときだけ |
+
+## 守ること
+
+- 質問は必ず `AskUserQuestion` を使う（各質問の options は2個以上）。テキストで質問しない。
+- トークン・API キーの値を画面・ログ・ファイルに出さない。`echo` もしない。
+- `csv_to_td.py --execute` は、計画表示（`--execute` なし）を見せてユーザーの了承を得てから実行する。
+- overwrite は既存テーブルの中身を置き換える。対象テーブル名を示してから確認を取る。
 
 ---
 
-## Step 0: TDX 認証チェック
+## 準備: スクリプトの場所
 
-最初に `tdx` が正常に動作するか確認する。失敗した場合はトークンを取得してから進む。
+このスキルのフォルダ（この SKILL.md と同じ場所）の `scripts/` を使う。パスが分からなければ探す:
 
 ```bash
-tdx databases
-```
-
-失敗（401 / 認証エラー）した場合:
-
-```python
-# mcp__tas__request_credential でトークンを取得
-# credential_name は "td_api_production_aws" など環境に合わせて指定
-import os, subprocess
-token = "<mcp__tas__request_credential で取得したトークン>"
-os.environ["TDX_ACCESS_TOKEN"] = token
-os.environ["TDX_SITE"] = "us01"  # JP環境なら "jp01"
-
-# 再確認
-subprocess.run(["tdx", "databases"], capture_output=True, text=True)
+SKILL_DIR=$(dirname "$(find / -name excel_to_csv.py -path '*excel-to-td-upload*' 2>/dev/null | head -1)")/..
+ls "$SKILL_DIR/scripts"
 ```
 
 ---
 
-## Step 1: Excelファイルの調査
+# フェーズA: Excel → CSV（フォルダに保存）
 
-### ファイルパスの特定（日本語ファイル名対応）
+## A1. Excel ファイルの特定
 
-日本語ファイル名は `os.path.exists()` が誤検出するケースがある。`os.listdir()` で探す。
+日本語ファイル名は `os.path.exists()` が誤判定することがあるため、`os.listdir()` で探す。
 
-```python
-import os
-
-base = '/home/agent/projects/project-1782743340050/'  # ファイルが置かれているディレクトリ
-xlsx_files = [os.path.join(base, f) for f in os.listdir(base) if f.endswith('.xlsx')]
-print(xlsx_files)
-# → ユーザーに提示して選ばせる、または名前にキーワードが含まれるものを自動選択
+```bash
+python3 -c "import os; base='.'; print([os.path.join(base, f) for f in os.listdir(base) if f.endswith('.xlsx')])"
 ```
 
-### XLSXパース（標準ライブラリのみ・openpyxl不要）
+複数あればユーザーに選んでもらう。
 
-TAS環境は外部PyPIに出られないため `openpyxl` は使えない。`zipfile` + `xml.etree` で読む。
-日本語ファイル名対応のため `open(rb)` → `io.BytesIO` 経由で開く。
+## A2. シートの下見（ファイルは書かない）
 
-```python
-import zipfile, io, xml.etree.ElementTree as ET, re
-from datetime import datetime, timedelta
-
-def col_letter_to_index(col_str):
-    idx = 0
-    for c in col_str.upper():
-        idx = idx * 26 + (ord(c) - ord('A') + 1)
-    return idx - 1
-
-def parse_cell_ref(ref):
-    m = re.match(r'([A-Z]+)(\d+)', ref)
-    return col_letter_to_index(m.group(1)), int(m.group(2)) - 1
-
-def excel_serial_to_datetime(serial):
-    base = datetime(1899, 12, 30) if serial >= 60 else datetime(1899, 12, 31)
-    return (base + timedelta(days=float(serial))).isoformat()
-
-def parse_xlsx(path):
-    ns = {'w': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
-    # 日本語ファイル名対応: バイト列で読んでから BytesIO に渡す
-    with open(path, 'rb') as fh:
-        data = fh.read()
-    with zipfile.ZipFile(io.BytesIO(data)) as z:
-        shared = []
-        if 'xl/sharedStrings.xml' in z.namelist():
-            root = ET.fromstring(z.read('xl/sharedStrings.xml'))
-            for si in root.findall('w:si', ns):
-                texts = [t.text or '' for t in si.iter('{http://schemas.openxmlformats.org/spreadsheetml/2006/main}t')]
-                shared.append(''.join(texts))
-        wb_root = ET.fromstring(z.read('xl/workbook.xml'))
-        sheets = [(s.get('name'), s.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id'))
-                  for s in wb_root.findall('.//w:sheet', ns)]
-        rels = ET.fromstring(z.read('xl/_rels/workbook.xml.rels'))
-        rel_map = {r.get('Id'): r.get('Target') for r in rels}
-        result = {}
-        for sheet_name, rid in sheets:
-            target = rel_map.get(rid, '')
-            fpath = f'xl/{target}' if not target.startswith('xl/') else target
-            if fpath not in z.namelist():
-                continue
-            ws_root = ET.fromstring(z.read(fpath))
-            rows_data = {}
-            for row_el in ws_root.findall('.//w:row', ns):
-                for c_el in row_el.findall('w:c', ns):
-                    ref = c_el.get('r', '')
-                    t = c_el.get('t', '')
-                    v_el = c_el.find('w:v', ns)
-                    if v_el is None or v_el.text is None:
-                        val = None
-                    elif t == 's':
-                        val = shared[int(v_el.text)]
-                    elif t == 'b':
-                        val = bool(int(v_el.text))
-                    else:
-                        raw = v_el.text
-                        try:
-                            val = int(raw) if '.' not in raw else float(raw)
-                        except (ValueError, TypeError):
-                            val = raw
-                        style_idx = int(c_el.get('s', -1))
-                        if isinstance(val, (int, float)) and style_idx in (14, 15, 16, 17, 22):
-                            val = excel_serial_to_datetime(val)
-                    col_idx, row_idx = parse_cell_ref(ref)
-                    rows_data.setdefault(row_idx, {})[col_idx] = val
-            if not rows_data:
-                continue
-            max_row = max(rows_data.keys())
-            max_col = max(max(row.keys()) for row in rows_data.values())
-            grid = [[rows_data.get(r, {}).get(c) for c in range(max_col + 1)]
-                    for r in range(max_row + 1)]
-            result[sheet_name] = grid
-    return result
-
-sheets = parse_xlsx("path/to/file.xlsx")
-for sheet_name, rows in sheets.items():
-    non_empty = [r for r in rows if any(v is not None for v in r)]
-    print(f"[{sheet_name}] 総行数: {len(rows)}, 非空行数: {len(non_empty)}, カラム数: {len(rows[0]) if rows else 0}")
-    if rows:
-        print(f"  1行目: {rows[0][:6]}")
+```bash
+python3 "$SKILL_DIR/scripts/excel_to_csv.py" "<xlsx>" --inspect
 ```
 
-調査結果をユーザーに提示し、空シート・目次シートをスキップ候補として提案する。
+シートごとに、非空行数・列数・先頭3行・**除外予定の末尾**が表示される。
 
----
+**データ終端のルール**: 空行（空セル・空文字・空白だけの行）が **20行以上連続**したら、そこでデータを打ち切り、それ以降にある注記などのテキストは取り込まない。20行未満の空行は区切りとして扱い、取り込み時にスキップする。行数は config の `blank_run_limit` で変えられる。
 
-## Step 2: ヒアリング（AskUserQuestion を使う）
+結果を表にしてユーザーに見せる。空シート・目次シートはスキップ候補として示す。
 
-**必ず `AskUserQuestion` ツールを使う。テキスト文章で質問してはいけない。各質問の options は必ず2個以上。**
+## A3. ヒアリング（AskUserQuestion）
 
-### 質問セット A（1回目）: DB名・シート選択
+### 質問セット1: 取り込むシートとヘッダー
 
 ```
-質問1: アップロード先のDatabase名は何ですか？
-  header: "Database名"
-  options:
-    - label: "既存のDBに追加（推奨）"
-      description: "既存データベース名を Other で入力してください（例: my_database）"
-    - label: "新規DBを作成"
-      description: "新しいデータベース名を Other で入力してください（例: my_new_database）"
-
-質問2: どのシートを取り込みますか？
+質問1: どのシートを取り込みますか？
   header: "シート選択"
   options:
     - label: "すべてのシート（推奨）"
-      description: "空・目次シートは自動スキップ候補として提示済み"
-    - label: "一部のシートだけ（Other で列挙）"
-      description: "取り込みたいシート名、またはスキップしたいシート名を入力"
-```
+      description: "空シート・目次シートは除外（下見で候補を提示済み）"
+    - label: "一部のシートだけ"
+      description: "Other で取り込むシート名（またはスキップするシート名）を入力"
 
-### 質問セット B（2回目）: ヘッダー構造・既存データ
-
-```
-質問3: ヘッダー行の構造はどれですか？
+質問2: ヘッダー行の構造はどれですか？
   header: "ヘッダー行"
   options:
-    - label: "1行目がヘッダー（通常構造）"
-      description: "1行目がカラム名のシートに適用"
-    - label: "2行目がヘッダー（1行目はタイトル行）"
-      description: "1行目がタイトル行、2行目がカラム名のシートに適用"
-    - label: "カテゴリ行 + 項目行の2行を結合する"
-      description: "1行目がカテゴリ（カート落ち等）、2行目が項目名のシートに適用"
-
-質問4: 既存テーブルがある場合の扱いは？
-  header: "既存データ"
-  options:
-    - label: "上書き（overwrite）（推奨）"
-      description: "既存データを全て削除して新しいデータで置き換える"
-    - label: "追記（append）"
-      description: "既存データの末尾に追加する"
+    - label: "1行目がヘッダー（通常）"
+      description: "header_row: 0"
+    - label: "2行目がヘッダー（1行目はタイトル）"
+      description: "header_row: 1"
+    - label: "カテゴリ行＋項目行の2行を結合"
+      description: "1行目がカテゴリ（カート落ち等）、2行目が項目名。列名は「カテゴリ_項目」"
 ```
 
-### 質問セット C（3回目）: テーブル名・カラム名変換確認
+シートごとに構造が違う場合は、下見結果から推定した案をシート別に示して確認する。
+
+### 質問セット2: テーブル名・カラム名
+
+TD の命名規則は **英小文字・数字・`_` のみ**。シート名と日本語のカラム名は Claude が英語に訳し、変換表を作って確認する（例: 申込日 → `application_date`、店舗名 → `store_name`、①売上データ → `sales_data`）。
 
 ```
-質問5: テーブル名・カラム名の変換案を確認してください
+質問3: テーブル名・カラム名の変換案で進めてよいですか？
   header: "変換確認"
   options:
     - label: "この変換で進める（推奨）"
-      description: "（変換案をdescriptionに列挙して提示する）"
-    - label: "修正する（Other で入力）"
-      description: "変更したい箇所を「元の名前 → 新しい名前」の形式で入力"
+      description: "（変換表を description に列挙）"
+    - label: "修正する"
+      description: "Other に「元の名前 → 新しい名前」の形式で入力"
 ```
 
----
+## A4. config.json の作成
 
-## Step 3: 名前の正規化
-
-TD命名規則: **英数小文字と `_` のみ**（テーブル名・カラム名とも）
-
-```python
-import re
-from datetime import datetime
-
-def normalize_col_name(raw, col_map, index):
-    if raw is None:
-        return f"column_{index}"
-    s = str(raw).strip()
-    if s in col_map:
-        return col_map[s]
-    if isinstance(raw, datetime):
-        return f"date_{raw.strftime('%Y_%m_%d')}"
-    s_clean = re.sub(r'[^\w]', '_', s.lower())
-    s_clean = re.sub(r'_+', '_', s_clean).strip('_')
-    if not s_clean or s_clean[0].isdigit():
-        s_clean = f"col_{s_clean}"
-    return s_clean if s_clean else f"column_{index}"
-```
-
-変換例: 申込日→`application_date` / 店舗名→`store_name` / ①売上データ→`sales_data` / ★評価→`star_rating`
-
-### 2行ヘッダー結合（カテゴリ×項目パターン）
-
-1行目がカテゴリ（カート落ち・購入等）、2行目が項目名のマトリクス構造の場合:
-
-```python
-def build_combined_header(cat_row, item_row, cat_map, item_map):
-    """カテゴリ行 × 項目行 を結合してカラム名を生成（Noneは直前の値を継承）"""
-    last_cat = None
-    result = []
-    for cat, item in zip(cat_row, item_row):
-        if cat is not None:
-            last_cat = cat
-        if item in item_map and last_cat is None:
-            result.append(item_map[item])
-        else:
-            cat_en = cat_map.get(last_cat, normalize_col_name(last_cat, {}, 0)) if last_cat else ''
-            item_en = item_map.get(item, normalize_col_name(item, {}, 0)) if item else 'col'
-            result.append(f"{cat_en}_{item_en}" if cat_en else item_en)
-    return result
-
-# 使い方（SHEET_CONFIG でヘッダー行を2行分指定）
-# cat_row  = all_rows[0]  # カテゴリ行
-# item_row = all_rows[1]  # 項目行
-# header = build_combined_header(cat_row, item_row, cat_map={}, item_map={})
-```
-
-Claude自身が日本語カラム名を英語に翻訳し、変換案をユーザーに提示して確認を取る。
-
----
-
-## Step 4: 固定カラムの付与
-
-すべてのテーブルに以下の2カラムを自動付与する:
-
-| カラム名 | 値 |
-|---------|-----|
-| `excel_name` | アップロードしたExcelファイル名（拡張子含む） |
-| `excel_sheet_name` | 元のシート名（翻訳前の原文） |
-
----
-
-## Step 5: アップロード（tdx query 経由）
-
-`tdx query` + Trino INSERT INTO でデータを投入する。
-
-### 重要制約
-
-- SQLは必ず `-f <ファイルパス>` で渡す（argv上限超過を防ぐため。直接渡すと `OSError: Argument list too long`）
-- **全行に `CAST` で型を明示する**（行ごとに型が変わると Trino が型解決できず `TYPE_MISMATCH` になる）
-- バッチサイズは500行が安定（1バッチ約15〜20秒）
-- 文字列中の `'` は `''` にエスケープする
-
-### アップロードスクリプト
-
-```python
-import os, re, json, subprocess, tempfile
-from datetime import datetime
-
-EXCEL_PATH    = "path/to/file.xlsx"
-DATABASE      = "target_database"
-BATCH_SIZE    = 500
-EXCEL_FILENAME = os.path.basename(EXCEL_PATH)
-PROGRESS_FILE  = f"/tmp/upload_progress_{DATABASE}.json"
-
-# シート名 → (テーブル名, ヘッダー行インデックス 0始まり)
-SHEET_CONFIG = {
-    "シートA": ("table_a", 0),
-    "シートB": ("table_b", 1),  # 2行目がヘッダーの場合
+```json
+{
+  "blank_run_limit": 20,
+  "sheets": {
+    "売上データ": {"table": "sales_data", "header_row": 0},
+    "店舗一覧":   {"table": "stores", "header_row": 1},
+    "ファネル":   {"table": "funnel", "header_row": 1, "combine_category_row": true}
+  },
+  "column_maps": {
+    "sales_data": {"申込日": "application_date", "店舗名": "store_name"},
+    "funnel":     {"日付": "date", "カート落ち_件数": "cart_count", "購入_件数": "purchase_count"}
+  }
 }
-# カラム名変換マップ（シートごと。未登録は normalize_col_name で自動変換）
-COLUMN_MAPS = {
-    "table_a": {"日本語カラム名": "english_col"},
-}
-
-
-def normalize_col_name(raw, col_map, index):
-    if raw is None: return f"column_{index}"
-    s = str(raw).strip()
-    if s in col_map: return col_map[s]
-    s_clean = re.sub(r'[^\w]', '_', s.lower())
-    s_clean = re.sub(r'_+', '_', s_clean).strip('_')
-    if not s_clean or s_clean[0].isdigit(): s_clean = f"col_{s_clean}"
-    return s_clean if s_clean else f"column_{index}"
-
-def clean_value(v):
-    if v is None: return None
-    import math
-    if isinstance(v, float) and (math.isnan(v) or math.isinf(v)): return None
-    if isinstance(v, str) and v in ("#REF!", "#N/A", "#VALUE!", "#NAME?", "#DIV/0!"): return None
-    if isinstance(v, datetime): return v.isoformat()
-    return v
-
-def infer_col_types(records, header):
-    """全レコードを走査して各カラムの Trino 型を決定する"""
-    col_types = {}
-    for col in header:
-        for rec in records:
-            v = rec.get(col)
-            if v is None:
-                continue
-            if isinstance(v, bool):
-                col_types[col] = 'VARCHAR'; break
-            if isinstance(v, int):
-                col_types.setdefault(col, 'BIGINT')
-            elif isinstance(v, float):
-                col_types[col] = 'DOUBLE'
-            else:
-                col_types[col] = 'VARCHAR'; break
-        col_types.setdefault(col, 'VARCHAR')
-    return col_types
-
-def to_sql_literal_typed(v, col_type):
-    """全行に CAST を付けて型を明示する（TYPE_MISMATCH 防止）"""
-    if v is None:
-        return f"CAST(NULL AS {col_type})"
-    if col_type == 'BIGINT':
-        return f"CAST({int(v)} AS BIGINT)"
-    if col_type == 'DOUBLE':
-        return f"CAST({float(v)} AS DOUBLE)"
-    return f"CAST('{str(v).replace(chr(39), chr(39)*2)}' AS VARCHAR)"
-
-def tdx_query(sql):
-    """SQLをファイル経由で tdx query に渡す（argv上限回避）"""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.sql', delete=False, encoding='utf-8') as f:
-        f.write(sql)
-        tmp = f.name
-    try:
-        r = subprocess.run(
-            ["tdx", "query", "-d", DATABASE, "-f", tmp],
-            capture_output=True, text=True
-        )
-        return r
-    finally:
-        os.unlink(tmp)
-
-def upload_table(table_name, header, records, mode="overwrite"):
-    col_list = ", ".join(header)
-    col_types = infer_col_types(records, header)
-
-    if mode == "overwrite":
-        tdx_query(f"DROP TABLE IF EXISTS {DATABASE}.{table_name}")
-        print(f"  DROP {table_name}")
-        table_exists = False  # DROP済みなので SHOW TABLES は不要
-    else:
-        r = tdx_query(f"SHOW TABLES LIKE '{table_name}'")
-        table_exists = table_name in r.stdout
-
-    total = len(records)
-    for batch_start in range(0, total, BATCH_SIZE):
-        batch = records[batch_start:batch_start + BATCH_SIZE]
-        rows_sql = []
-        for rec in batch:
-            vals = ", ".join(to_sql_literal_typed(rec.get(col), col_types[col]) for col in header)
-            rows_sql.append(f"  ({vals})")
-        values_clause = ",\n".join(rows_sql)
-
-        if not table_exists and batch_start == 0:
-            sql = f"CREATE TABLE {DATABASE}.{table_name} AS\nSELECT * FROM (VALUES\n{values_clause}\n) AS t({col_list})"
-            table_exists = True
-        else:
-            sql = f"INSERT INTO {DATABASE}.{table_name} ({col_list})\nSELECT * FROM (VALUES\n{values_clause}\n) AS t({col_list})"
-
-        r = tdx_query(sql)
-        if r.returncode != 0:
-            raise RuntimeError(f"Query failed:\n{r.stderr[:500]}")
-
-        print(f"  [{table_name}] {min(batch_start + BATCH_SIZE, total)}/{total} rows")
-
-    progress = {}
-    if os.path.exists(PROGRESS_FILE):
-        with open(PROGRESS_FILE) as f:
-            progress = json.load(f)
-    progress[table_name] = {"rows": total, "done": True}
-    with open(PROGRESS_FILE, "w") as f:
-        json.dump(progress, f)
-
-
-# ── メイン処理 ──────────────────────────────────────────────
-# sheets は Step 1 の parse_xlsx() で取得した dict
-# sheets = { "シート名": [[row0col0, ...], [row1col0, ...], ...] }
-
-progress = {}
-if os.path.exists(PROGRESS_FILE):
-    with open(PROGRESS_FILE) as f:
-        progress = json.load(f)
-    print(f"Resume: {list(progress.keys())}")
-
-for sheet_name, (table_name, header_row_idx) in SHEET_CONFIG.items():
-    if progress.get(table_name, {}).get("done"):
-        print(f"SKIP (already done): {table_name}")
-        continue
-    if sheet_name not in sheets:
-        print(f"SKIP (not found): {sheet_name}")
-        continue
-
-    all_rows = sheets[sheet_name]
-    if not all_rows:
-        print(f"SKIP (empty): {sheet_name}")
-        continue
-
-    col_map = COLUMN_MAPS.get(table_name, {})
-    header_raw = all_rows[header_row_idx]
-    header = [normalize_col_name(c, col_map, i) for i, c in enumerate(header_raw)]
-    header += ["excel_name", "excel_sheet_name"]
-
-    records = []
-    for row in all_rows[header_row_idx + 1:]:
-        if not any(v is not None for v in row):
-            continue
-        rec = {header[i]: clean_value(v) for i, v in enumerate(row) if i < len(header) - 2}
-        rec["excel_name"] = EXCEL_FILENAME
-        rec["excel_sheet_name"] = sheet_name
-        records.append(rec)
-
-    if not records:
-        print(f"SKIP (no data): {sheet_name}")
-        continue
-
-    print(f"\nUploading [{sheet_name}] → {table_name} ({len(records)} rows)")
-    try:
-        upload_table(table_name, header, records, mode="overwrite")
-        print(f"  Done: {table_name}")
-    except Exception as e:
-        print(f"  ERROR: {table_name}: {e}")
-
-print("\nAll done.")
 ```
+
+- `header_row` は0始まり（0 = 1行目）。
+- `combine_category_row: true` では、`header_row` の1行上がカテゴリ行になる。空のカテゴリは左の値を引き継ぐ。`column_maps` のキーは `カテゴリ_項目` の形にする。
+- `sheets` に書いたシートだけを取り込む。
+
+## A5. 変換の実行（フォルダに保存）
+
+出力先は、プロジェクトフォルダ内の `excel_to_td/<Excelファイル名（拡張子なし）>/` にする。
+
+```bash
+python3 "$SKILL_DIR/scripts/excel_to_csv.py" "<xlsx>" "excel_to_td/<name>" --config config.json
+```
+
+出力:
+- `<テーブル名>.csv`（UTF-8・ヘッダー付き）。各行の末尾に固定カラム `excel_name`（ファイル名）と `excel_sheet_name`（元のシート名）が付く。
+- `manifest.json`（シート ↔ テーブル、データ範囲、行数、カラム名と型、打ち切り情報、警告）。
+
+## A6. シートごとの確認（必須）
+
+スクリプトの出力を、シートごとに次の形でユーザーに見せる:
+
+| シート | テーブル | ヘッダー | データ範囲 | 件数 | 末尾の除外 |
+|---|---|---|---|---|---|
+| 売上データ | sales_data | 1行目 | 2〜1,204行 | 1,180 | 1,205行目以降（先頭「※ 注記…」） |
+
+- 警告（`!` で始まる行）があれば必ず伝える。例: `column_N`（英数字にできなかったカラム）、`*_src`（予約カラム名との重複による改名）。`column_N` が残っている場合は `column_maps` を直して A5 をやり直す。
+- 除外された先頭テキストがデータの一部なら、`blank_run_limit` を上げて A5 をやり直す。
+
+確認が済めばフェーズAは完了。CSV はフォルダに残るので、フェーズBは後から別に実行してもよい。
+
+---
+
+# フェーズB: CSV → TD（Bulk Import API）
+
+## B1. 認証
+
+TAS では `mcp__tas__request_credential` でトークンを受け取り、環境変数に入れる（値は表示しない）。
+
+```python
+import os
+os.environ["TDX_ACCESS_TOKEN"] = "<mcp__tas__request_credential で取得した値>"   # 例: credential_name="td_api_production_aws"
+os.environ["TDX_SITE"] = "us01"   # JP: jp01 / EU: eu01 / AP: ap02
+```
+
+`csv_to_td.py` は次の順で認証情報と接続先を決める:
+
+| 用途 | 優先順 |
+|---|---|
+| 認証 | `TD_API_KEY` → `TDX_ACCESS_TOKEN` |
+| 接続先 | `TD_ENDPOINT` → `TDX_SITE` |
+| 方式 | `TD_AUTH_SCHEME` → 自動判定（`ACCOUNT_ID/KEY` 形式なら `TD1`、それ以外は `Bearer`） |
+
+## B2. 接続確認（書き込みなし）
+
+```bash
+python3 "$SKILL_DIR/scripts/csv_to_td.py" "excel_to_td/<name>" --database <db> --check
+```
+
+- **すべて OK** → B3 へ。
+- **Bulk Import API が NG（401/403）** → OAuth トークンでは Bulk Import を使えない。書き込み権限のある API キーを `TD_API_KEY` に設定してもらい、もう一度 `--check` する。
+- **データベース参照が NG（404）** → DB 名を確認する。DB の新規作成はこのスキルでは行わない。
+
+`--check` が通っても、データ送信（upload_part）の権限までは確かめられない。初回は小さいシートで試す（`--tables <1テーブル>`）。
+
+## B3. 取り込み方法の確認と計画表示
+
+```
+質問: 既存テーブルがある場合の扱いは？
+  header: "既存データ"
+  options:
+    - label: "上書き（overwrite）（推奨）"
+      description: "一時テーブルに取り込んでから入れ替える。失敗しても既存テーブルは変わらない"
+    - label: "追記（append）"
+      description: "既存テーブルに行を足す。テーブルがなければ作成する"
+```
+
+```bash
+python3 "$SKILL_DIR/scripts/csv_to_td.py" "excel_to_td/<name>" --database <db> --mode overwrite
+```
+
+`--execute` を付けない実行は計画の表示だけ（TD には書き込まない）。テーブル・行数・パート数・カラムと型を見せ、了承を得る。
+
+## B4. 取り込みの実行
+
+データが大きいとツールの実行時間を超えることがあるため、バックグラウンドで実行し、ログを確認する。
+
+```bash
+cd "excel_to_td/<name>"
+nohup python3 "$SKILL_DIR/scripts/csv_to_td.py" . --database <db> --mode overwrite --execute > upload.log 2>&1 &
+tail -n 20 upload.log
+```
+
+処理の流れ（テーブルごと）:
+1. overwrite: 一時テーブル `<table>_tmp_<unixtime>` を型付きで作る。append: 本テーブルがなければ作る。
+2. Bulk Import セッションを作り、CSV を `--part-rows`（既定10万行）ずつ msgpack.gz で送る。
+3. freeze → perform → `ready` まで待つ → エラーレコードが0件なら commit。
+4. overwrite: 本テーブルと一時テーブルを swap し、旧データ（一時テーブル側）を削除する。
+5. 成否を `upload_progress_<db>.json` に記録する。もう一度実行すると、完了済みのテーブルは飛ばす。
+
+エラーレコードが1件でもあれば commit せずに止める（既存テーブルは変わらない）。許容する場合だけ `--allow-errors` を付ける。
+
+## B5. 件数の確認
+
+```bash
+tdx query "SELECT COUNT(*) AS cnt FROM <db>.<table>"
+```
+
+`manifest.json` の `data_rows` と一致するか、テーブルごとに報告する。
+
+---
+
+## 取り込み後のテーブル
+
+| カラム | 型 | 内容 |
+|---|---|---|
+| `time` | long | 取り込んだ時刻（UNIX 秒）。TD の予約カラム |
+| （Excel の列） | long / double / string | 列全体が整数なら long、小数を含めば double、それ以外は string |
+| `excel_name` | string | Excel ファイル名 |
+| `excel_sheet_name` | string | 元のシート名（翻訳前） |
+
+- 日付・日時セルは ISO 形式の文字列（`2026-10-01T00:00:00`）になる。
+- `#REF!`・`#N/A` などのエラー値と空セルは NULL になる。
+- Excel 側に `time`・`excel_name`・`excel_sheet_name` という列があると、`*_src` に改名される。
 
 ---
 
 ## トラブルシューティング
 
-### `OSError: [Errno 7] Argument list too long`
-**原因**: VALUES句が大きく argv 上限を超えた。  
-**対処**: `tdx query -f <path>` でSQLをファイル経由で渡す（本スキルの標準手順）。
+| 症状 | 原因と対処 |
+|---|---|
+| `--check` で Bulk Import API が 401/403 | OAuth トークンは Bulk Import に使えない。書き込み権限のある API キーを `TD_API_KEY` に設定する |
+| 取り込み結果でエラーレコードが出る | `manifest.json` の型と実際の値が合っていない可能性がある。CSV を確認する。許容するなら `--allow-errors` |
+| 途中で止まった（タイムアウト・通信断） | 同じコマンドをもう一度実行する。完了済みのテーブルは飛ばす。テーブルをやり直す場合は `upload_progress_<db>.json` から該当テーブルを消す |
+| `<table>_tmp_<数字>` が残っている | 強制終了などで後始末が走らなかった。中身を確認してから `tdx` 等で削除する |
+| カラム名が `column_N` になる | 日本語だけのヘッダーは英数字にできない。`column_maps` で英語名を指定して A5 をやり直す |
+| 注記行がデータに混ざる | 注記の手前の空行が20行未満。`blank_run_limit` を下げるか、Excel 側で空行を入れる |
+| 必要な行まで除外される | データの途中に20行以上の空行がある。`blank_run_limit` を上げる |
+| `FileNotFoundError`（日本語ファイル名） | `os.listdir()` で見つけたパスをそのまま渡す |
 
-### `[TYPE_MISMATCH] Table: [bigint], Query: [integer]`
-**原因**: 行ごとに型が変わり Trino が型を解決できない。  
-**対処**: `infer_col_types` で全カラムの型を事前決定し、全行に `CAST` を付ける（本スキルの標準手順）。
+## テスト
 
-### `FileNotFoundError` でファイルが開けない
-**原因**: 日本語ファイル名で `os.path.exists()` が誤検出するケースがある。  
-**対処**: `os.listdir()` でファイルを探し、`open(path, 'rb')` → `io.BytesIO` 経由で開く（本スキルの標準手順）。
+```bash
+cd "$SKILL_DIR" && python3 -m unittest discover -s tests -v
+```
 
-### Bearer Token で書き込みAPIが失敗する
-**原因**: TAS の OAuth Bearer Token は Bulk Import API（`/v3/bulk_import/*`）に非対応。  
-**対処**: `tdx query` 経由 INSERT INTO を使う（本スキルの標準手順）。
-
-### `tdx` が 401 エラーで失敗する
-**原因**: TDX 認証トークンが未設定または期限切れ。  
-**対処**: Step 0 の手順で `mcp__tas__request_credential` を呼んでトークンを再取得する。
-
----
-
-## 注意事項
-
-- **バッチサイズ**: 500行/バッチが安定（1バッチ約15〜20秒）。`-f` ファイル経由なら1000行も試す価値あり。
-- **進捗ファイル**: `/tmp/upload_progress_<db>.json` に完了シートを記録。中断後は自動スキップ（レジューム対応）。
-- **末尾ノート行の処理**: シート末尾に補足説明が含まれる場合、データ終端行を `SHEET_CONFIG` で手動指定するか、「1列目が None かつ特定行以降はすべて None」パターンで自動検出する。
-- **2行ヘッダー**: 1行目がタイトル・2行目がカラム名のシートは `header_row_idx=1` を指定。カテゴリ×項目の2行マトリクスは `build_combined_header` を使う。
-- **数式セル**: `#REF!` 等のエラー値は `None` として扱う。
+TD には接続しない（模擬サーバーで Bulk Import の流れを確かめる）。
