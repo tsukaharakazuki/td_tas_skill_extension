@@ -1,0 +1,54 @@
+# ==============================================================================
+# <顧客名 / プロジェクト名> CJO × Engage Studio 設定値メモ
+# 作業フォルダ直下に cjo-engage-memo.yml として保存し、作業のたびに読み書きする。
+# 秘密情報（APIキー、パスワード、トークン）は書かない。
+# ==============================================================================
+
+environment:
+  site: us01                      # us01 | jp01 | eu01 | ap02
+  console_host: console-next.us01.treasuredata.com
+  checked_at: "YYYY-MM-DD"
+  tdx_version: "2026.10.x"        # tdx --version
+
+engage_studio:
+  contract_status: unknown        # contracted | not_contracted | unknown（判定根拠を evidence に）
+  evidence: ""                    # 例: "tdx engage workspaces で 3 件取得 (YYYY-MM-DD)"
+  workspace: "<ワークスペース名>"
+  workspace_id: "<UUID>"
+  email_domains: ["<send domain>"]
+  sender_id: "<UUID>"             # tdx delivery senders --workspace
+  sender_email: "<from address>"
+  attached_parent_segments: ["<親セグメント名>"]
+
+cdp:
+  parent_segment: "<親セグメント名>"   # 名前で記録（tdx ps list にIDは出ない）
+  parent_segment_id: "<ID>"            # 利用者から提示された時のみ
+  output_database: "cdp_audience_<ID>"
+
+connections:
+  engage_connection_name: "<tdx connection list の名前>"
+  engage_connection_id: "<ID>"
+  engage_connector_type: "<type>"
+
+always_on_campaigns:              # ジャーニーのアクティベーション先
+  - key: stage_1
+    name: "<AOC名>"
+    id: "<UUID>"
+    template: "<テンプレート名>"
+
+journeys:
+  - name: "<ジャーニー名>"
+    id: "<ID>"
+    yaml: segments/<parent-segment-slug>/<journey>.yml
+    folder: "<Console 上のフォルダ>"   # push では反映されないことがある → Console で移動
+
+notifications:
+  email_recipients: []            # TD ユーザーID（tdx users で確認）
+
+coupon_mapping:                   # ストリングビルダーで埋め込む固定値
+  - stage: "F1"
+    column: coupon_code
+    value: "<COUPON>"
+
+decisions_log:                    # 利用者と合意した判断を日付つきで残す
+  - "YYYY-MM-DD: F0 は COUNT < 1 方式で実装することに合意"
