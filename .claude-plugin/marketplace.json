@@ -5,8 +5,8 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.14.0",
-    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, CRM PDCA automation, ad acquisition/purchase analytics, and unified TD SQL/Workflow reference"
+    "version": "1.15.0",
+    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, CRM PDCA automation, ad acquisition/purchase analytics, unified TD SQL/Workflow reference, and CJO journey + Engage Studio setup"
   },
   "plugins": [
     {
@@ -133,6 +133,15 @@
       "strict": false,
       "skills": [
         "./td-sql-workflow-reference"
+      ]
+    },
+    {
+      "name": "td-tas-cjo-engage",
+      "description": "Use when creating or updating Treasure Data CJO journeys in Treasure AI Studio with Engage Studio delivery: Engage contract check and setup, Always-On Campaigns and templates, plaintext generation, new journey build, and safe updates through a mandatory test journey (test_v<N>_<name>) with entry-criteria impact checks.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./td-tas-cjo-engage"
       ]
     }
   ]
