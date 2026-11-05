@@ -69,13 +69,15 @@ COALESCE(campaign_id, custom_event_id, 'template:' || email_template_id, 'unknow
 
 ## 確認クエリ（読み取りのみ）
 
+> 確認クエリは `tdx query` で実行し、`time >= to_unixtime(current_timestamp) - N*86400` 形式で書いています（`tdx query` で動作確認済み）。`TD_INTERVAL` も `tdx query` で動きますが、日付境界が JST に揃わず窓が変わるので、このクエリでは使っていません。`from_unixtime` の表示は UTC です。長期間の集計に使う場合は、パーティションプルーニングのため `TD_INTERVAL(time, '-N d', 'JST')` の利用を推奨します。
+
 ```sql
 -- メール: 直近30日のイベント種別・テスト・Bot判定の内訳
 SELECT event_type, test_mode, campaign_model, is_bot_event,
        COUNT(1) AS events, COUNT(DISTINCT message_id) AS messages,
        COUNT(DISTINCT campaign_id) AS campaigns, COUNT(DISTINCT custom_event_id) AS custom_events
 FROM delivery_email_<domain>.events
-WHERE TD_INTERVAL(time, '-30d', 'JST')
+WHERE time >= to_unixtime(current_timestamp) - 30*86400
 GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4
 
 -- メール: time と送信時刻（timestamp）の関係、開封の遅延
@@ -83,10 +85,10 @@ SELECT event_type,
        APPROX_PERCENTILE(DATE_DIFF('hour', FROM_ISO8601_TIMESTAMP("timestamp"),
          FROM_ISO8601_TIMESTAMP(COALESCE(open_timestamp, click_timestamp, bounce_timestamp, delivery_timestamp, "timestamp"))), ARRAY[0.5, 0.9, 0.99]) AS lag_hours
 FROM delivery_email_<domain>.events
-WHERE TD_INTERVAL(time, '-60d', 'JST')
+WHERE time >= to_unixtime(current_timestamp) - 60*86400
 GROUP BY 1
 
 -- LINE: 列構成と件数
-SELECT COUNT(1), MIN(TD_TIME_STRING(time, 'd!', 'JST')), MAX(TD_TIME_STRING(time, 'd!', 'JST'))
+SELECT COUNT(1), MIN(from_unixtime(time)), MAX(from_unixtime(time))
 FROM delivery_line_<id>.<table>
 ```
