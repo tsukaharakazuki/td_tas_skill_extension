@@ -1,38 +1,68 @@
-# カート放棄Workflow
+# カート放棄・ブラウザ放棄Workflow
 
-Treasure Dataでカート放棄者を検出し、メール配信用の送信リストを作成するための、顧客非依存のSkillとDigdag Workflowサンプルです。
+Treasure Dataでカート放棄／商品閲覧後のブラウザ放棄を検出し、メール配信用リストを作る、顧客非依存のSkillとDigdag Workflowです。既存のフォルダ名・Skill名は互換性のため維持しています。
+
+## 最初に選ぶ3モード
+
+Skillは、導入時に最初に次をヒアリングします。
+
+| 選択 | `config/params.yml` | 対象 |
+|---|---|---|
+| カート放棄のみ | `mode: cart` | カート操作後、購入せず離脱した人 |
+| ブラウザ放棄のみ | `mode: browser` | 商品詳細を閲覧したが、カート操作・購入に進まず離脱した人 |
+| 両方 | `mode: both` | 両施策。カート優先・共有頻度キャップを適用 |
+
+「ブラウザ放棄」はブラウザ終了の検知ではなく、最後の活動からの無操作時間で判定します。ブラウザのみでも、除外用のカート・購入イベントは必要ですが、カート用の送信リストやCampaignは不要です。
 
 ## 内容
 
-- `SKILL.md` — カート放棄Workflowを構築する際のヒアリング、設計、テスト、検証手順
-- `cart-abandonment/` — 実際のDigdag Workflow、SQL、設定テンプレート
+- [`SKILL.md`](SKILL.md)：モード選択からデータ・ルール・配信経路をヒアリングし、顧客用コピーを作成する手順。
+- [`cart-abandonment/`](cart-abandonment/)：3モード共通のWorkflow、SQL、実際に読み込まれる設定、ローカルテスト。
+- [`cart-abandonment/README.md`](cart-abandonment/README.md)：共通入力スキーマ、設定、実行ガード、配信・テストの詳細。
+- [`MIGRATION.md`](MIGRATION.md)：旧サンプルからの変更点と移行時の注意。
+- [`VALIDATION.md`](VALIDATION.md)：32件のローカルテストと検証範囲・未検証事項。
 
-## 使い方
+Skillを配置する際は、このディレクトリ全体を維持してください。内側のWorkflowにも同じ `SKILL.md` を同梱しています。
 
-1. `SKILL.md` を読み込む。
-2. `cart-abandonment/config/params.example.yml` を顧客用設定のベースとしてコピーする。
-3. Webログ、カート条件、購入除外、同意条件、出力先、配信経路をヒアリングする。
-4. 顧客用Workflowコピーを作成し、`<...>` プレースホルダーを置き換える。
-5. SQL、YAML、Digdag構造を検証する。
-6. dry-runでタスクグラフと外部送信範囲を確認する。
-7. 明示的な承認後にのみテスト送信・本番送信を実行する。
+## セットアップの流れ
 
-## テストWorkflow
+1. `SKILL.md` を読み込み、**カートのみ／ブラウザのみ／両方**を選ぶ。
+2. `cart-abandonment/` を新しい顧客用ディレクトリへコピーする。
+3. `config/params.yml`（見本は `params.example.yml`）でモードを設定する。
+4. Webログ、人物・宛先解決、最新同意、購入・カート除外、商品、履歴、夜間分、配信経路を確認する。ソースを同梱READMEの入力契約へ対応付ける。
+5. 選んだ施策にだけCampaign・テンプレート項目を割り当てる。レコメンド等は利用可能なデータに応じて設定・検証する。
+6. ローカルテスト、YAML/Digdag、SQL・変数・顧客固有情報の残存を検証する。
+7. 顧客環境のCLIで対応する構造チェックと実行のdry-runを行う（`tdx wf validate` は対応する版のみ）。初期状態ではスケジュール・配信とも無効。
+8. **実行対象・宛先・件数・Campaignを説明して承認を得た後にのみ**、テスト実行・本番切替を進める。
 
-テストの `.dig` エントリーポイントは `cart-abandonment/send_email_test.dig` の1つです。実行時の `test_mode` でテスト範囲を切り替えます。
+処理・テストの切替は設定ファイルを編集して反映します。`-p test_mode=...` などの実行時上書きには依存しません。`tdx.json` に実アカウントやTDプロファイルは含めません。
+
+## 共通化しているもの
+
+- 最新の人物別活動に基づく離脱判定と、端末をまたぐ購入・カート行動による抑止。
+- 選択施策だけを動かす分岐。不要施策の出力・Campaignを参照しない構成。
+- 施策別キャップと合算キャップ、同一人物への両施策の重複防止。
+- 通常処理／夜間分の対象期間、商品・宛先の重複排除と配信前チェック。
+- 配信前の安全ガードと、検知候補・配信予約・実際の配信結果の区別。
+
+## 配布前の情報残存チェック
 
 ```bash
-tdx wf run cart_abandonment.send_email_test -p test_mode=smoke
-tdx wf run cart_abandonment.send_email_test -p test_mode=fixture
-tdx wf run cart_abandonment.send_email_test -p test_mode=full
+python3 -I scripts/check_package.py
+# 顧客名・旧DB名などを追加で検査する場合（値は手元で指定）:
+python3 -I scripts/check_package.py --forbid '<旧顧客名>' --forbid '<旧DB名>'
 ```
 
-- `smoke`：最大表示・最小表示を確認する初回テスト
-- `fixture`：カート数、在庫、レコメンド、ポイントなどの代表パターンを確認するテスト
-- `full`：送信履歴に存在するパターンを網羅するテスト
+このチェックはSkillの同梱コピー、実メールアドレス、固定UUID、TDアカウント固有のメタデータなどを調べます。完全な秘密情報スキャナーではないため、差分の目視確認も行ってください。検知ロジックのテストは内側のREADMEを参照してください。
 
-テスト送信前に、テスト宛先と本番から分離されたテストキャンペーンを設定し、想定メッセージ数を確認してください。
+## 配布時の原則
 
-## 注意
+顧客・ブランド名、実DB/テーブル、実宛先、Campaign ID、URL、クーポン、独自の外部Workflow呼び出しは引き継ぎません。識別子のステッチや同意ルールも顧客固有の判断として確認します。
 
-このサンプルには顧客の認証情報や本番キャンペーン情報を含めません。`params.example.yml` のプレースホルダーを残したまま実行しないでください。
+このサンプルは、任意のWebログを無変換で読める完成品ではありません。顧客の入力スキーマへ対応するアダプターと、配信先テンプレートの項目確認が必要です。ローカルテストの成功はTD上の実行やメール到達の確認を意味しません。
+
+外部コネクタを選ぶ場合、Skillで接続仕様を確認して顧客用のエクスポート処理を作成します。同梱のEngage向け設定をそのまま別のコネクタへ流用しないでください。
+
+---
+
+<img src="https://work.treasure.ai/gem-emoji.svg" width="16" height="16" align="absmiddle" alt=""> Generated with [Treasure Work](https://work.treasure.ai/)

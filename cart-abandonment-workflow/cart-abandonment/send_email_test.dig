@@ -1,120 +1,67 @@
-################################################################################
-# send_email_test.dig
-#
-# カート放棄メール テスト配信（モード切替式）
-#
-# ⚠️ テスト専用: SQL側で実顧客のメールアドレスをテスト宛先へ置換する。
-#    本番Always-On Campaignではなく、テスト用Campaignを指定すること。
-#
-# 実行例:
-#   tdx wf run cart_abandonment.send_email_test -p test_mode=smoke
-#   tdx wf run cart_abandonment.send_email_test -p test_mode=fixture
-#   tdx wf run cart_abandonment.send_email_test -p test_mode=full
-#
-# モード:
-#   smoke  : 最大表示 / 最小表示を確認（通常・在庫僅少、最大4通）
-#   fixture: カート数・在庫・推薦・ポイントの代表パターンを確認
-#   full   : 送信履歴に存在するパターンを網羅（最大18通）
-################################################################################
-
+# Synthetic TEST exports only; disabled by default, no schedule and no real reads.
+# Exact destinations/count/assets require approval even for a single test email.
+timezone: UTC
 _export:
-  td:
-    database: cart_abandonment_db
-    engine: presto
+  config:
+    !include : config/params.yml
 
-  # 実行時に -p test_mode=smoke|fixture|full で切り替える
-  test_mode: smoke
-  test_recipients: "<TEST_RECIPIENT_EMAIL>"
-
-  engage:
-    connection: "<ENGAGE_CONNECTION>"
-    workspace_id: "<ENGAGE_WORKSPACE_ID>"
-    always_on_campaign_id: "<ALWAYS_ON_CAMPAIGN_ID>"
-    normal_test_campaign_id: "<ALWAYS_ON_CAMPAIGN_ID_NORMAL_TEST>"
-    low_stock_test_campaign_id: "<ALWAYS_ON_CAMPAIGN_ID_LOW_STOCK_TEST>"
-
-# ------------------------------------------------------------------------------
-# smoke: 最初の表示確認。最大表示と最小表示を各テンプレートで確認する。
-# ------------------------------------------------------------------------------
-+smoke:
-  if>: ${test_mode == 'smoke'}
++check_boolean_types:
+  if>: ${![config.workflow.enabled,config.delivery.enabled,config.delivery.approved,config.personalization.products,config.personalization.recommendations,config.personalization.attributes,config.personalization.coupons,config.testing.enabled,config.testing.approved].every(function(v) { return typeof v == 'boolean'; })}
   _do:
-    +normal:
-      td>: queries/send/test/test_send_cart_abandon_normal_first.sql
-      database: cart_abandonment_db
-      result_connection: ${engage.connection}
-      result_settings:
-        type: treasure_engage_v1
-        campaign_type: email
-        campaign_model: always_on
-        workspace_id: ${engage.workspace_id}
-        always_on_campaign_id: ${engage.normal_test_campaign_id}
-        batch_size: 1000
-        thread_count: 1
+    fail>: Enablement and approval flags must be YAML booleans, never quoted strings.
 
-    +low_stock:
-      td>: queries/send/test/test_send_cart_abandon_low_stock_first.sql
-      database: cart_abandonment_db
-      result_connection: ${engage.connection}
-      result_settings:
-        type: treasure_engage_v1
-        campaign_type: email
-        campaign_model: always_on
-        workspace_id: ${engage.workspace_id}
-        always_on_campaign_id: ${engage.low_stock_test_campaign_id}
-        batch_size: 1000
-        thread_count: 1
-
-# ------------------------------------------------------------------------------
-# fixture: 実データから代表パターンを組み立て、指定した宛先へ送る。
-# ------------------------------------------------------------------------------
-+fixture:
-  if>: ${test_mode == 'fixture'}
++check_number_types:
+  if>: ${![config.workflow.max_recipients,config.workflow.max_execution_lag_seconds,config.window.max_age_seconds,config.window.session_timeout_seconds,config.window.inactivity_seconds,config.window.expected_latency_seconds,config.scan.lookback_seconds,config.suppression.purchase_seconds,config.suppression.cart_seconds,config.frequency.window_seconds,config.frequency.per_kind,config.frequency.total,config.personalization.max_items,config.testing.expected_messages,config.testing.max_messages].every(function(v) { return typeof v == 'number' && isFinite(v) && Math.floor(v) == v && v >= 0; }) || config.personalization.max_items < 1 || config.personalization.max_items > 4}
   _do:
-    +send:
-      td>: queries/send/test/test_send_cart_abandon_normal_second.sql
-      database: cart_abandonment_db
-      result_connection: ${engage.connection}
-      result_settings:
-        type: treasure_engage_v1
-        campaign_type: email
-        campaign_model: always_on
-        workspace_id: ${engage.workspace_id}
-        always_on_campaign_id: ${engage.always_on_campaign_id}
-        batch_size: 1000
-        thread_count: 1
+    fail>: Durations and limits must be finite nonnegative YAML integer numbers.
 
-# ------------------------------------------------------------------------------
-# full: 送信履歴に存在するパターンを通常版・在庫僅少版ともに網羅する。
-# ------------------------------------------------------------------------------
-+full:
-  if>: ${test_mode == 'full'}
++test_disabled:
+  if>: ${!config.testing.enabled}
   _do:
-    +normal:
-      td>: queries/send/test/test_send_cart_abandon_normal.sql
-      database: cart_abandonment_db
-      result_connection: ${engage.connection}
-      result_settings:
-        type: treasure_engage_v1
-        campaign_type: email
-        campaign_model: always_on
-        workspace_id: ${engage.workspace_id}
-        always_on_campaign_id: ${engage.normal_test_campaign_id}
-        batch_size: 1000
-        thread_count: 1
+    echo>: "Synthetic test delivery disabled; no TD jobs or external sends."
 
-    +low_stock:
-      td>: queries/send/test/test_send_cart_abandon_low_stock.sql
-      database: cart_abandonment_db
-      result_connection: ${engage.connection}
-      result_settings:
-        type: treasure_engage_v1
-        campaign_type: email
-        campaign_model: always_on
-        workspace_id: ${engage.workspace_id}
-        always_on_campaign_id: ${engage.low_stock_test_campaign_id}
-        batch_size: 1000
-        thread_count: 1
++synthetic_test:
+  if>: ${config.testing.enabled}
+  _do:
+    +validate_mode:
+      if>: ${['cart','browser','both'].indexOf(config.mode) < 0 || ['smoke','fixture','full'].indexOf(config.testing.mode) < 0}
+      _do:
+        fail>: Invalid abandonment mode or synthetic test mode.
 
-+log_test_done:
-  echo>: "カート放棄テスト配信完了 mode=${test_mode}"
+    +validate_recipients:
+      if>: ${!config.testing.approved || !Array.isArray(config.testing.recipients) || !Array.isArray(config.testing.allowlist) || config.testing.recipients.length < 1 || !config.testing.recipients.every(function(r) { return typeof r == 'string' && /^[a-z0-9._%+-]+@[a-z0-9.-]+[.][a-z][a-z]+$/.test(r) && config.testing.allowlist.indexOf(r) >= 0; }) || config.testing.recipients.length != config.testing.recipients.filter(function(v,i,a) { return a.indexOf(v) == i; }).length}
+      _do:
+        fail>: Synthetic tests require approved, unique normalized recipients explicitly in the test allowlist.
+
+    +validate_assets:
+      if>: ${!config.testing.connection || !config.testing.workspace_id || config.testing.connection == config.delivery.connection || config.testing.workspace_id == config.delivery.workspace_id || (config.mode != 'browser' && (!config.testing.cart_campaign_id || [config.delivery.cart_campaign_id,config.delivery.browser_campaign_id].indexOf(config.testing.cart_campaign_id) >= 0)) || (config.mode != 'cart' && (!config.testing.browser_campaign_id || [config.delivery.cart_campaign_id,config.delivery.browser_campaign_id].indexOf(config.testing.browser_campaign_id) >= 0)) || (config.mode == 'both' && config.testing.cart_campaign_id == config.testing.browser_campaign_id)}
+      _do:
+        fail>: Isolated test connection/workspace/campaigns must be distinct from production and appropriate to the selected mode.
+
+    +validate_message_count:
+      if>: "${!/^[0-9]+$/.test(String(config.testing.expected_messages)) || !/^[0-9]+$/.test(String(config.testing.max_messages)) || config.testing.expected_messages < 1 || config.testing.max_messages < 1 || config.testing.expected_messages > config.testing.max_messages || config.testing.expected_messages != config.testing.recipients.length * (config.mode == 'both' ? 2 : 1) * (config.testing.mode == 'smoke' ? 1 : (config.testing.mode == 'fixture' ? 2 : 3))}"
+      _do:
+        fail>: Approved expected_messages must match recipients x kinds x variants and stay below max_messages.
+
+    +summary:
+      echo>: "Synthetic test mode=${config.testing.mode}; kind_mode=${config.mode}; expected_messages=${config.testing.expected_messages}; no production sources or shared history will be read."
+
+    +test_exports:
+      for_each>:
+        test_recipient: ${config.testing.recipients}
+        test_kind: "${config.mode == 'both' ? ['cart','browser'] : [config.mode]}"
+        test_variant: "${config.testing.mode == 'smoke' ? ['normal'] : (config.testing.mode == 'fixture' ? ['normal','low_stock'] : ['minimal','normal','low_stock'])}"
+      _do:
+        td>: queries/test_fixture.sql
+        database: ${config.output.database}
+        engine: presto
+        job_retry: 0
+        result_connection: ${config.testing.connection}
+        result_settings:
+          type: treasure_engage_v1
+          campaign_type: email
+          campaign_model: always_on
+          workspace_id: ${config.testing.workspace_id}
+          always_on_campaign_id: "${test_kind == 'cart' ? config.testing.cart_campaign_id : config.testing.browser_campaign_id}"
+          batch_size: 1
+          thread_count: 1

@@ -1,0 +1,52 @@
+# INACTIVE HISTORICAL REFERENCE ONLY. Do not deploy, execute or copy operational instructions.
+# Source adapters, campaign contracts and safety semantics differ from the current pipeline.
+################################################################################
+# send_email.dig
+#
+# カート放棄メール配信（サブWF）
+#
+# 呼び出し元:
+#   - cart_abandonment.dig（リアルタイム版）
+#   - cart_abandonment_nightly.dig（夜間版）
+#   いずれも push_send_list 生成後に call> send_email.dig で呼び出す。
+#
+[RETIRED OPERATIONAL INSTRUCTION: use current config, local tests, dry-run and explicit approval.]
+#   ⚠️ 事前に cart_abandonment_push_send_list にデータが入っている必要あり
+#
+# 配信方針:
+#   全セグメント → カート放棄 v2（1テンプレートでクーポン/在庫僅少をLiquid分岐）
+#
+# 2026-07-18 改修:
+[RETIRED OPERATIONAL INSTRUCTION: use current config, local tests, dry-run and explicit approval.]
+################################################################################
+
+[RETIRED OPERATIONAL INSTRUCTION: use current config, local tests, dry-run and explicit approval.]
+_export:
+  td:
+    database: cart_abandonment_db
+    engine: presto
+  coupon:
+    expiry_date: "<COUPON_EXPIRY_DATE>"
+    expiry_label: "<COUPON_EXPIRY_LABEL>"
+  engage:
+    connection: "<ENGAGE_CONNECTION>"
+    workspace_id: "<ENGAGE_WORKSPACE_ID>"
+    cart_campaign_id: "<ALWAYS_ON_CAMPAIGN_ID>"
+
++send_email:
+  # カート放棄 v2（全セグメント統一・1テンプレートでクーポン/在庫僅少をLiquid分岐）
+  +send_cart:
+    td>: queries/send/send_cart_abandon_normal.sql
+    database: cart_abandonment_db
+    result_connection: ${engage.connection}
+    result_settings:
+      type: treasure_engage_v1
+      campaign_type: email
+      campaign_model: always_on
+      workspace_id: ${engage.workspace_id}
+      always_on_campaign_id: ${engage.cart_campaign_id}
+      batch_size: 1000
+      thread_count: 1
+
+  +log_send_done:
+    echo>: "カート放棄メール配信完了（v2テンプレート・キャンペーン経由）"

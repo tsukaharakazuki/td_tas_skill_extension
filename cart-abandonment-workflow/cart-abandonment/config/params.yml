@@ -1,0 +1,69 @@
+# Active configuration, included directly by cart_abandonment.dig.
+# Edit files, not runtime -p overrides. Keep the distributed template disabled.
+mode: both                         # cart | browser | both
+workflow:
+  enabled: false                   # true permits TD reads AND table writes
+  max_recipients: 100               # final unique-recipient circuit breaker
+  max_execution_lag_seconds: 900    # never deliver historical/backfill sessions
+
+timezone: UTC                      # SQL calendar-day/overnight timezone (IANA)
+output:
+  database: abandonment_work
+  prefix: abandonment
+
+sources:                           # fully-qualified canonical tables; see README
+  events: abandonment_input.events
+  identities: abandonment_input.identities
+  recipients: abandonment_input.recipients
+  orders: abandonment_input.orders
+  products: abandonment_input.products
+  recommendations: abandonment_input.recommendations
+  attributes: abandonment_input.attributes
+  coupons: abandonment_input.coupons
+  history: abandonment_work.abandonment_history
+
+scan:
+  lookback_seconds: 259200          # covers windows + session boundary + exclusions
+window:
+  kind: rolling                    # rolling | overnight; one common pipeline
+  max_age_seconds: 86400
+  session_timeout_seconds: 1800
+  inactivity_seconds: 2400          # >= timeout + expected ingestion latency
+  expected_latency_seconds: 600
+  overnight_start: "21:00:00"       # previous LOCAL date, inclusive
+  overnight_end: "07:00:00"         # session's LOCAL date, exclusive
+suppression:
+  purchase_seconds: 172800          # orders AND web signals, member-level
+  cart_seconds: 172800              # browser suppression, even in browser-only mode
+frequency:
+  period: rolling                  # rolling | calendar_day, same for both kinds
+  window_seconds: 86400             # used only for rolling
+  per_kind: 1
+  total: 2
+personalization:
+  max_items: 4                      # 1..4; browser shows its latest viewed item
+  products: false                   # latest publication/availability + enrichment
+  recommendations: false           # latest recommendation snapshot, max 4
+  attributes: false                # latest points/segment
+  coupons: false                   # valid_from <= as_of < valid_until
+
+delivery:
+  enabled: false
+  approved: false                  # approval recorded in customer-owned config
+  connection: ""                   # never put credentials here
+  workspace_id: ""
+  cart_campaign_id: ""             # unused/not required in browser-only mode
+  browser_campaign_id: ""          # unused/not required in cart-only mode
+
+testing:
+  mode: smoke                      # smoke | fixture | full; also selects LOCAL suite
+  enabled: false                   # permits synthetic TD test exports, never real data
+  approved: false                  # explicit approval of exact destinations/count/assets
+  recipients: []                   # normalized test emails; no real values in template
+  allowlist: []                    # every recipient must appear explicitly here
+  expected_messages: 0             # recipients x enabled kinds x selected variants
+  max_messages: 10                  # hard circuit breaker for one test attempt
+  connection: ""                   # isolated TEST assets, distinct from production
+  workspace_id: ""
+  cart_campaign_id: ""             # required only for cart/both
+  browser_campaign_id: ""          # required only for browser/both

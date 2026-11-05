@@ -1,0 +1,3 @@
+SELECT CAST(NULL AS VARCHAR) AS member_id, CAST(NULL AS VARCHAR) AS code,
+       CAST(NULL AS VARCHAR) AS description, CAST(NULL AS VARCHAR) AS image_url,
+       CAST(NULL AS BIGINT) AS valid_until WHERE FALSE
