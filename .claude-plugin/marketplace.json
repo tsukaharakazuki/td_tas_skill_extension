@@ -92,11 +92,11 @@
     },
     {
       "name": "cart-abandonment-workflow",
-      "description": "Use when creating, customizing, generalizing, validating, or deploying a Treasure Data cart-abandonment email workflow. Covers Web log and cart/purchase logic interviews, Engage Studio Always-On Campaign integration, external connectors, personalization, and safe test email delivery.",
+      "description": "Use when creating, customizing, generalizing, validating, or deploying Treasure Data cart or browser abandonment email workflows. Interview users to select cart-only, browser-only, or both; covers shared purchase suppression and frequency caps, Engage Studio Always-On Campaign integration, external connectors, personalization, and safe test email delivery.",
       "source": "./",
       "strict": false,
       "skills": [
-        "./cart-abandonment-workflow"
+        "./cart-browser-abandonment-workflow"
       ]
     },
     {
