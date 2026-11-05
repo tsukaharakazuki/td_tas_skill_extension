@@ -9,7 +9,7 @@ description: Treasure Dataのカート放棄・ブラウザ放棄メールWorkfl
 
 ## サンプルと安全性
 
-- 既存の配布パス `cart-abandonment-workflow/cart-abandonment/` とSkill名を維持する。名前がcartでも3モードに対応する。
+- 配布パスは `cart-browser-abandonment-workflow/cart-abandonment/` を使う。Skill名 `cart-abandonment-workflow` は既存環境との互換性のため維持し、3モードに対応する。
 - 顧客用コピーの `config/params.yml` に設定を集約する。`params.example.yml` は初期設定の見本とする。設定変更を `-p` の上書きに依存させない。
 - `cart_abandonment.dig` は共通エントリーポイントとし、`mode: cart | browser | both` で処理を選ぶ。
 - 配布時はWorkflow実行・配信を無効とし、安全ガードを維持する。有効なスケジュールを付けず、設定・検証だけでメールが送られない状態を保つ。

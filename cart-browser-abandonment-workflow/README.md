@@ -1,6 +1,6 @@
 # カート放棄・ブラウザ放棄Workflow
 
-Treasure Dataでカート放棄／商品閲覧後のブラウザ放棄を検出し、メール配信用リストを作る、顧客非依存のSkillとDigdag Workflowです。既存のフォルダ名・Skill名は互換性のため維持しています。
+Treasure Dataでカート放棄／商品閲覧後のブラウザ放棄を検出し、メール配信用リストを作る、顧客非依存のSkillとDigdag Workflowです。配布フォルダは `cart-browser-abandonment-workflow` です。Skill名・プラグイン名 `cart-abandonment-workflow` は既存環境との互換性のため維持しています。
 
 ## 最初に選ぶ3モード
 
