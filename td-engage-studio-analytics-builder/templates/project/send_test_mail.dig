@@ -1,0 +1,27 @@
+# =====================================================================
+# 日次メールレポートのテスト送信（集計は行いません）
+# ---------------------------------------------------------------------
+# 集計済みテーブルから前日分のレポートを作り、config/test_email_list.yml の宛先だけに送ります
+# 本番の送信先へ送る前に、表示崩れや数値を確認するために使います
+# 先に td_engage_studio_analytics.dig を1回以上実行して、テーブルを作っておいてください
+# =====================================================================
+timezone: Asia/Tokyo
+
+_export:
+  !include : 'config/common.yml'
+  !include : 'config/email.yml'
+  !include : 'config/line.yml'
+  !include : 'config/mail_report.yml'
+
++build:
+  td>: queries/mail/build_daily_report.sql
+  store_last_results: true
+
++show:
+  echo>: "[test_mail] report_date=${td.last_results.report_date} / sent=${td.last_results.total_sent}"
+
++send:
+  mail>: templates/mail_daily_report.html
+  subject: "[TEST] ${td.last_results.subject}"
+  html: true
+  !include : 'config/test_email_list.yml'

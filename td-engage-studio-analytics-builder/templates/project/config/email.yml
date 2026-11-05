@@ -1,0 +1,17 @@
+---
+# =====================================================================
+# メール（Engage Studio Email）
+# =====================================================================
+# 配信ログは delivery_email_<送信ドメイン> データベースに格納されます
+#   例: 送信ドメイン mail.example.com → delivery_email_mail_example_com
+#   確認: tdx databases "delivery_email_*"
+email:
+  enabled: true
+  database: delivery_email_example_com
+  table: events
+
+  # 送信失敗ログ（error_events: Runtime Error / Rendering Error）
+  # テーブルが存在する環境だけ true にしてください
+  #   確認: tdx tables "delivery_email_example_com.*"
+  error_events_enabled: false
+  error_table: error_events

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!--
+  日次メールレポートのテンプレート
+  - td.last_results.（列名） は queries/mail/build_daily_report.sql の結果です
+  - mail_report.* は config/mail_report.yml の値です
+  - 配色は Treasure AI ブランド（Primary 1 #494FFF / Primary 2 #8753FF / Accent 3 #EE2328 はマイナス表示のみ）
+  - メールクライアント向けに、レイアウトは table + インラインCSS だけで組んでいます（JavaScript なし）
+-->
+<html lang="ja">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>${td.last_results.subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F5F5FF;-webkit-text-size-adjust:100%;">
+
+<!-- プレビューテキスト（受信一覧に表示される1行） -->
+<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#F5F5FF;opacity:0;">
+  ${td.last_results.report_date} の配信 ${td.last_results.total_sent} 通。チャネル別の到達・開封・クリックと、メッセージ別の結果をお届けします。
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F5FF;">
+<tr><td align="center" style="padding:40px 12px;">
+
+  <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;background-color:#ffffff;border-radius:30px;">
+
+    <!-- ヘッダー（濃紺 → Primary 1 のグラデーション。非対応メーラーでは Primary 1 のベタ塗り） -->
+    <tr>
+      <td bgcolor="#494FFF" style="background-color:#494FFF;background-image:linear-gradient(98deg, #131023 6.85%, #494FFF 70%, #8753FF 100.36%);border-radius:30px 30px 0 0;padding:28px 40px 32px 40px;">
+        <img src="${mail_report.logo_url}" alt="Treasure AI" width="160" height="21" style="display:block;width:160px;height:21px;border:0;outline:none;text-decoration:none;margin:0 0 22px 0;">
+        <p style="margin:0 0 6px 0;font-family:Inter,Arial,sans-serif;font-size:13px;color:#ffffff;opacity:0.9;">Engage Studio Analytics</p>
+        <h1 style="margin:0;font-family:Manrope,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:24px;font-weight:700;line-height:1.3;color:#ffffff;">
+          ${mail_report.title}
+        </h1>
+        <p style="margin:8px 0 0 0;font-family:Inter,Arial,sans-serif;font-size:14px;color:#ffffff;">対象日: ${td.last_results.report_date}（${tz}）</p>
+      </td>
+    </tr>
+
+    <!-- 本文 -->
+    <tr>
+      <td style="padding:36px 40px;font-family:Inter,Arial,sans-serif;font-size:15px;line-height:1.6;color:#000000;">
+
+        <!-- 宛名・リード（宛名は config/mail_report.yml の account_label） -->
+        ${td.last_results.greeting_html}
+        <p style="margin:0 0 28px 0;font-size:14px;">${td.last_results.report_date} の Engage Studio 配信結果です。開封・クリックは配信後も増えるため、メッセージ別の率は集計時点の累計です。</p>
+
+        <!-- チャネル別KPI -->
+        <p style="margin:0 0 8px 0;font-family:Manrope,Arial,sans-serif;font-size:17px;font-weight:700;color:#494FFF;">サマリー</p>
+        <div style="margin:0 0 28px 0;">${td.last_results.kpi_html}</div>
+
+        <!-- 直近7日の推移 -->
+        <p style="margin:0 0 8px 0;font-family:Manrope,Arial,sans-serif;font-size:17px;font-weight:700;color:#494FFF;">直近7日の推移</p>
+        <div style="margin:0 0 28px 0;">${td.last_results.trend_html}</div>
+
+        <!-- 前日に配信したメッセージ -->
+        <p style="margin:0 0 8px 0;font-family:Manrope,Arial,sans-serif;font-size:17px;font-weight:700;color:#494FFF;">${td.last_results.report_date} に配信したメッセージ</p>
+        <div style="margin:0 0 28px 0;">${td.last_results.sent_html}</div>
+
+        <!-- 直近7日に配信したメッセージ -->
+        <p style="margin:0 0 8px 0;font-family:Manrope,Arial,sans-serif;font-size:17px;font-weight:700;color:#494FFF;">直近7日に配信したメッセージ（累計）</p>
+        <div style="margin:0 0 8px 0;">${td.last_results.top_html}</div>
+
+        <!-- LINE OA Insights（config/line.yml の insights_enabled: true のときだけ表示） -->
+        <div style="margin:0 0 28px 0;">${td.last_results.line_oa_html}</div>
+
+        <!-- ダッシュボード / データの場所 -->
+        ${td.last_results.dashboard_html}
+        <p style="margin:0 0 16px 0;font-size:13px;">
+          <strong style="font-weight:600;">集計テーブル:</strong>
+          <code>${output_db}.${table_prefix}message_summary</code>（メッセージ別）/ <code>${output_db}.${table_prefix}daily</code>（日別）/ <code>${output_db}.${table_prefix}email_link_clicks</code>（リンク別）
+        </p>
+
+        <p style="margin:0;font-size:12px;color:#666666;">
+          本メールは Treasure Workflow「${wf_name}」（${session_time}）から自動送信されています。<br>
+          送信先の変更は config/send_email_list.yml、内容の変更は config/mail_report.yml で行えます。
+        </p>
+      </td>
+    </tr>
+
+    <!-- フッター -->
+    <tr>
+      <td align="center" style="padding:28px 40px 36px 40px;border-radius:0 0 30px 30px;border-top:1px solid #EEEEEE;">
+        <img src="https://get.treasuredata.com/rs/714-XIJ-402/images/TD-symbol%402x.png" alt="Treasure AI" width="40" height="40" style="display:block;width:40px;height:40px;border:0;margin:0 auto 8px auto;">
+        <p style="margin:0;font-family:Manrope,Arial,sans-serif;font-size:16px;font-weight:700;color:#000000;">Treasure AI</p>
+        <p style="margin:4px 0 0 0;font-family:Inter,Arial,sans-serif;font-size:12px;color:#666666;">Prepared by Treasure Data</p>
+      </td>
+    </tr>
+
+  </table>
+
+</td></tr>
+</table>
+</body>
+</html>

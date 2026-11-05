@@ -1,0 +1,26 @@
+---
+# =====================================================================
+# 日次メールレポート
+# =====================================================================
+# 集計後に「前日の配信結果」をHTMLメールで送信します
+# 送信先は config/send_email_list.yml で設定します
+mail_report:
+  enabled: false
+
+  # 件名: <subject_brand> Engage Studio 日次レポート 2026-11-04（配信 1,234 通）
+  subject_brand: "[Treasure AI]"
+  title: "Engage Studio 日次配信レポート"
+  # 宛名（「<account_label> 様」）。空 "" の場合は表示しません
+  account_label: ""
+
+  # 前日の配信が0件でも送信するか（死活監視を兼ねる場合は true）
+  send_when_no_delivery: true
+
+  # 本文に載せるメッセージの最大件数
+  max_rows: 20
+
+  # 「ダッシュボードを開く」リンク（共有したダッシュボードのURL。空 "" なら非表示）
+  dashboard_url: ""
+
+  # ヘッダー左上のロゴ（白抜き）。メールから参照できる公開URLを指定します
+  logo_url: "https://raw.githubusercontent.com/tsukaharakazuki/td_tas_skill_extension/main/td-engage-studio-analytics-builder/templates/project/templates/images/treasure-ai-logo-white.png"

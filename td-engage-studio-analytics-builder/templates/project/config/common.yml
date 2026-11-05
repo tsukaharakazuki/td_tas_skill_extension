@@ -1,0 +1,44 @@
+---
+# =====================================================================
+# 共通設定
+# =====================================================================
+
+# --- td> オペレーターの既定設定 --------------------------------------
+# database は集計結果の出力先DB（output_db と同じ値）を書いてください
+# ※ 出力先DBは事前に作成してください（tdx db create <DB名> など）
+td:
+  database: engage_studio_analytics
+  engine: presto
+
+output_db: engage_studio_analytics
+
+# 出力テーブル名の接頭辞（例: es_ → es_email_recipients）
+# 1つのDBに複数のEngage環境を集計する場合は es_brand_a_ のように変えてください
+table_prefix: es_
+
+# --- 集計期間 --------------------------------------------------------
+# Engage の events テーブルは time = 送信時刻 で格納され、開封・クリックは
+# 数日〜数週間後に「送信時刻のパーティション」へ追記されます。
+# そのため毎回「送信日が直近 lookback_days 日のメッセージ」を作り直します。
+#   60 日あれば実データ（開封遅延 99%点で約3週間）を十分にカバーします
+lookback_days: 60
+
+# true にすると全期間を作り直します（初回・定義変更時）。完了後は false に戻して push してください
+rebuild_all: false
+
+# --- 集計対象 --------------------------------------------------------
+# テスト送信（test_mode = true）を除外するか
+exclude_test: true
+
+# 日付の区切りに使うタイムゾーン（TD関数の表記: JST / UTC など）
+tz: JST
+
+# --- 表示用 ----------------------------------------------------------
+# WF名（エラーメール・日次レポートの本文に表示）
+wf_name: td_engage_studio_analytics
+
+# コンソールURL（リージョンに合わせて変更）
+#   US  : https://console.treasuredata.com
+#   東京 : https://console.treasuredata.co.jp
+#   EU  : https://console.eu01.treasuredata.com
+console_url: "https://console.treasuredata.com"

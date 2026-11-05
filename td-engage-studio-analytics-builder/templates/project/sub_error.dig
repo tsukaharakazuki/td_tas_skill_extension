@@ -1,0 +1,13 @@
+# =====================================================================
+# WFエラー通知（td_engage_studio_analytics.dig の _error から call> されます。直接実行しない）
+# 送信先: config/error_email_list.yml
+# =====================================================================
++send_mail:
+  mail>:
+    data: |
+      Engage Studio 集計WFでエラーが発生しました。
+      ワークフロー名： ${wf_name}
+      日時： ${session_local_time}
+      ${console_url}/app/workflows/${project_id}/sessions/${session_id}
+  subject: "[エラー] ${wf_name}"
+  !include : 'config/error_email_list.yml'
