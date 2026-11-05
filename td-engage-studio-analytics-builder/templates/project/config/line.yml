@@ -1,0 +1,29 @@
+---
+# =====================================================================
+# LINE（Engage Studio LINE OA）
+# =====================================================================
+# LINE配信を行っていない場合は enabled: false のままにしてください
+#   確認: tdx databases "delivery_line_*"
+line:
+  enabled: false
+
+  # --- 配信ログ（1行 = 1ユーザーへの送信リクエスト）----------------------
+  # データベース: delivery_line_<system_identifier>
+  database: delivery_line_example
+  table: line_events
+
+  # 配信ログの列構成
+  #   auto_log  : delivered / status / response_status_code / line_request_id / error 列がある形式
+  #               （2026-11 時点で実環境に出力されている形式）
+  #   event_log : event（delivery / error）/ status（success / failed）/ error_code 列がある形式
+  #               （ドキュメント記載の形式）
+  #   確認: tdx describe <database>.<table>
+  log_format: auto_log
+
+  # --- LINE OA Insights（Integration Hub「LINE OA Insights」で取り込んだテーブル）---
+  # 配信ログには開封・クリックがないため、アカウント単位の配信数を補助的に表示します
+  # 取り込み設定は docs/line_insights_setup.md を参照してください
+  insights_enabled: false
+  insights_database: line_oa_reporting
+  # Target = Message Deliveries の取り込み先テーブル
+  insights_table: message_deliveries

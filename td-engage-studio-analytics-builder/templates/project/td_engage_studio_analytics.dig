@@ -1,0 +1,215 @@
+# =====================================================================
+# Engage Studio 配信レポート集計（メール / LINE）
+# ---------------------------------------------------------------------
+# 1. 出力テーブルが無ければ作成（初回は自動。手動セットアップ不要）
+# 2. メール: 送信日が直近 lookback_days 日の配信ログを1通単位・日別・リンク別に集計
+# 3. LINE  : 配信ログを送信リクエスト単位に集計 / LINE OA Insights を日別に整形
+# 4. 全チャネル共通テーブルを作り直し
+#      message_summary : メッセージ別サマリー（累計）
+#      send_cohort     : 送信日 × メッセージ（その日に送った通のその後。期間で絞り込む集計に使う）
+#      daily           : 発生日 × メッセージ（その日に起きた送信・開封・クリック）
+#    → ダッシュボード・日次メールはこの3テーブルをチャネル・期間・メッセージで絞り込んで表示
+# 5. 日次メールレポート（config/mail_report.yml の enabled: true のとき）
+#
+# 設定はすべて config/*.yml で行います（-p での上書きは使いません）
+# =====================================================================
+timezone: Asia/Tokyo
+
+# 毎朝集計して、前日の結果をメールします（開始するときはコメントを外して push）
+#schedule:
+#  daily>: 08:00:00
+
+_export:
+  !include : 'config/common.yml'
+  !include : 'config/email.yml'
+  !include : 'config/line.yml'
+  !include : 'config/mail_report.yml'
+
+_error:
+  +error_mail:
+    call>: sub_error.dig
+
++show_settings:
+  echo>: "[settings] output=${output_db}.${table_prefix}* / lookback_days=${lookback_days} / rebuild_all=${rebuild_all} / email=${email.enabled} / line=${line.enabled} / line_insights=${line.insights_enabled} / mail_report=${mail_report.enabled}"
+
+# ---------------------------------------------------------------------
+# 1. テーブル準備
+# ---------------------------------------------------------------------
++setup:
+  # rebuild_all: true のときは集計テーブルを消して全期間を作り直す
+  +drop_for_rebuild:
+    if>: ${rebuild_all}
+    _do:
+      td_ddl>:
+      drop_tables:
+        - "${table_prefix}email_recipients"
+        - "${table_prefix}email_events_daily"
+        - "${table_prefix}email_link_clicks"
+        - "${table_prefix}email_errors_daily"
+        - "${table_prefix}line_deliveries"
+
+  # 無いテーブルだけ作成（CREATE TABLE IF NOT EXISTS）。message_names は手で登録する表示名マスタ
+  +create_tables:
+    for_each>:
+      name:
+        - email_recipients
+        - email_events_daily
+        - email_link_clicks
+        - email_errors_daily
+        - line_deliveries
+        - line_oa_daily
+        - message_names
+    _parallel: true
+    _do:
+      td>: queries/setup/create_${name}.sql
+
+# ---------------------------------------------------------------------
+# 2. メール
+# ---------------------------------------------------------------------
++email:
+  if>: ${email.enabled}
+  _do:
+    # 集計期間の行を削除（rebuild_all のときはテーブルを作り直したので不要）
+    +delete_window:
+      if>: ${!rebuild_all}
+      _do:
+        for_each>:
+          target:
+            - email_recipients
+            - email_events_daily
+            - email_link_clicks
+        _parallel: true
+        _do:
+          td>: queries/common/delete_window.sql
+
+    +load:
+      _parallel: true
+
+      +recipients:
+        td>: queries/email/recipients.sql
+        insert_into: ${table_prefix}email_recipients
+
+      +events_daily:
+        td>: queries/email/events_daily.sql
+        insert_into: ${table_prefix}email_events_daily
+
+      +link_clicks:
+        td>: queries/email/link_clicks.sql
+        insert_into: ${table_prefix}email_link_clicks
+
+      # error_events テーブルがある環境だけ（config/email.yml）
+      +errors:
+        if>: ${email.error_events_enabled}
+        _do:
+          +delete_window:
+            if>: ${!rebuild_all}
+            _do:
+              td>: queries/common/delete_window.sql
+              target: email_errors_daily
+          +insert:
+            td>: queries/email/errors_daily.sql
+            insert_into: ${table_prefix}email_errors_daily
+
+# ---------------------------------------------------------------------
+# 3. LINE
+# ---------------------------------------------------------------------
++line:
+  if>: ${line.enabled}
+  _do:
+    +delete_window:
+      if>: ${!rebuild_all}
+      _do:
+        td>: queries/common/delete_window.sql
+        target: line_deliveries
+
+    # log_format（auto_log / event_log）に合わせてSQLを切り替え
+    +deliveries:
+      td>: queries/line/deliveries_${line.log_format}.sql
+      insert_into: ${table_prefix}line_deliveries
+
+    # LINE OA Insights（Message Deliveries）を日別に整形（毎回作り直し）
+    +oa_daily:
+      if>: ${line.insights_enabled}
+      _do:
+        td>: queries/line/oa_daily.sql
+        create_table: ${table_prefix}line_oa_daily
+
+# ---------------------------------------------------------------------
+# 4. 全チャネル共通テーブル（ダッシュボード・メールレポートの元データ）
+#    件数が小さいため毎回作り直します
+# ---------------------------------------------------------------------
++unified:
+  +drop:
+    td_ddl>:
+    drop_tables:
+      - "${table_prefix}message_summary"
+      - "${table_prefix}send_cohort"
+      - "${table_prefix}daily"
+
+  +create:
+    _parallel: true
+    +message_summary:
+      td>: queries/setup/create_message_summary.sql
+    +send_cohort:
+      td>: queries/setup/create_send_cohort.sql
+    +daily:
+      td>: queries/setup/create_daily.sql
+
+  # メッセージ別サマリー（send_cohort / daily のラベルに使うため先に作成）
+  +message_summary_email:
+    if>: ${email.enabled}
+    _do:
+      td>: queries/unified/message_summary_email.sql
+      insert_into: ${table_prefix}message_summary
+
+  +message_summary_line:
+    if>: ${line.enabled}
+    _do:
+      td>: queries/unified/message_summary_line.sql
+      insert_into: ${table_prefix}message_summary
+
+  +send_cohort_email:
+    if>: ${email.enabled}
+    _do:
+      td>: queries/unified/send_cohort_email.sql
+      insert_into: ${table_prefix}send_cohort
+
+  +send_cohort_line:
+    if>: ${line.enabled}
+    _do:
+      td>: queries/unified/send_cohort_line.sql
+      insert_into: ${table_prefix}send_cohort
+
+  +daily_email:
+    if>: ${email.enabled}
+    _do:
+      td>: queries/unified/daily_email.sql
+      insert_into: ${table_prefix}daily
+
+  +daily_line:
+    if>: ${line.enabled}
+    _do:
+      td>: queries/unified/daily_line.sql
+      insert_into: ${table_prefix}daily
+
+# ---------------------------------------------------------------------
+# 5. 日次メールレポート（前日の配信結果）
+#    送信先: config/send_email_list.yml
+# ---------------------------------------------------------------------
++mail_report:
+  if>: ${mail_report.enabled}
+  _do:
+    +build:
+      td>: queries/mail/build_daily_report.sql
+      store_last_results: true
+
+    +show:
+      echo>: "[mail_report] should_send=${td.last_results.should_send} / report_date=${td.last_results.report_date} / sent=${td.last_results.total_sent}"
+
+    +send:
+      if>: ${td.last_results.should_send}
+      _do:
+        mail>: templates/mail_daily_report.html
+        subject: ${td.last_results.subject}
+        html: true
+        !include : 'config/send_email_list.yml'

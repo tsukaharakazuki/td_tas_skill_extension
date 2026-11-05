@@ -1,0 +1,7 @@
+{
+  "name": "td-engage-studio-analytics-builder",
+  "description": "Engage Studio email/LINE delivery reporting workflow with per-message and overall tables, Treasure AI branded dashboard, and daily HTML mail report",
+  "source": "./",
+  "skills": ["./td-engage-studio-analytics-builder"],
+  "strict": false
+}

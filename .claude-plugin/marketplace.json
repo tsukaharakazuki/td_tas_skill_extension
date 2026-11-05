@@ -5,8 +5,8 @@
     "email": "kazuki.tsukahara@treasuredata.com"
   },
   "metadata": {
-    "version": "1.15.0",
-    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, CRM PDCA automation, ad acquisition/purchase analytics, unified TD SQL/Workflow reference, and CJO journey + Engage Studio setup"
+    "version": "1.16.0",
+    "description": "Treasure Data skill extensions — tdx CLI connection, read-only connection, Excel, Engage, workflow, recommendation, datafeed, cart-abandonment, CRM PDCA automation, ad acquisition/purchase analytics, unified TD SQL/Workflow reference, CJO journey + Engage Studio setup, and Engage Studio delivery analytics"
   },
   "plugins": [
     {
@@ -142,6 +142,15 @@
       "strict": false,
       "skills": [
         "./td-tas-cjo-engage"
+      ]
+    },
+    {
+      "name": "td-engage-studio-analytics-builder",
+      "description": "Use when building or customizing an Engage Studio delivery report workflow — email and LINE results aggregated per message and overall — with read-only checks of delivery_email_* / delivery_line_* against the docs, LINE delivery confirmation and optional LINE OA Insights, a Treasure AI branded HTML dashboard with channel/date/message filters, and a daily HTML mail report sent from the workflow. Triggers on 'Engage Studioのレポート', '配信結果を集計', '開封率・クリック率', 'LINE配信結果', 'Engage Studio Dashboard', '配信結果の日次メール'.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./td-engage-studio-analytics-builder"
       ]
     }
   ]
