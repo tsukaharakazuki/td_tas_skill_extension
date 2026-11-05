@@ -35,6 +35,8 @@ Configure the `td_engage_studio_analytics` Treasure Workflow: it aggregates Enga
 
 ## Step 2. Discover the environment (read-only, before asking)
 
+> **注意:** 確認クエリは `tdx query` で実行します。`TD_INTERVAL` / `TD_TIME_STRING` も `tdx query` で動作します（確認済み）。時間フィルタは `td_interval` を基本にしてください（JST の日付境界で区切られ、パーティションプルーニングが効きます）。`time >= to_unixtime(current_timestamp) - N*86400` は時刻単位の窓になり、件数が `td_interval` と一致しません。`docs/source_schema.md` の確認クエリは `to_unixtime` 形式で書いています。
+
 ```bash
 tdx status                                   # profile / site → console_url
 tdx databases "delivery_email_*"

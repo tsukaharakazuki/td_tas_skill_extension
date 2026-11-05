@@ -38,7 +38,7 @@ tz: JST
 wf_name: td_engage_studio_analytics
 
 # コンソールURL（リージョンに合わせて変更）
-#   US  : https://console.treasuredata.com
+#   US  : https://console.us01.treasuredata.com
 #   東京 : https://console.treasuredata.co.jp
 #   EU  : https://console.eu01.treasuredata.com
-console_url: "https://console.treasuredata.com"
+console_url: "https://console.us01.treasuredata.com"
