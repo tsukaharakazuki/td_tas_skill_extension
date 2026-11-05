@@ -17,7 +17,7 @@
 | `event_type` | varchar | Send / Delivery / Open / Click / Bounce（直近30日の実データ）。Complaint / DeliveryDelay も集計対象 |
 | `message_id` | varchar | 1通のキー。集計の最小単位 |
 | `campaign_id` / `campaign_name` / `campaign_model` | varchar | **Campaign 機能の送信だけ値が入る**（`campaign_model = 'Campaign'`）。Journey / Activation の送信では NULL |
-| `custom_event_id` | varchar | Journey / Activation の送信で入る。Campaign 送信では `campaign_id` と同じ値 |
+| `custom_event_id` | varchar | Journey / Activation の送信で入ることが多い。Campaign 送信では `campaign_id` と同じ値。**`campaign_id` / `custom_event_id` が両方 NULL の行はテスト送信（`test_mode = true`）だけで確認した**（直近60日で4通）。その場合 `message_key` は `template:<email_template_id>` にフォールバックするため集計に影響しない |
 | `activation_id` / `activation_name` | varchar | Campaign 送信で入る（`engage_campaign_<id>`）。ドキュメントでは出力マッピングで追加される列 |
 | `email_template_id` | varchar | 1つの custom_event_id に複数テンプレートが紐づくことがある |
 | `subject` | varchar | **受信者ごとに差し込みで変わる**ことがある（1メッセージで数百種類）。メッセージのキーには使えない |
