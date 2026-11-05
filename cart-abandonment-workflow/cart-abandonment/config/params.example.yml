@@ -1,130 +1,69 @@
-################################################################################
-# cart_abandonment / config/params.example.yml
-#
-# Customer-agnostic configuration template. Copy to params.yml in a
-# customer-owned workflow and replace every <TO_BE_CONFIRMED> value.
-################################################################################
-
-timezone: Asia/Tokyo
-
-td:
-  database: <TARGET_DATABASE>
-  engine: presto
-  table_prefix: <OUTPUT_TABLE_PREFIX>
-
+# Active configuration, included directly by cart_abandonment.dig.
+# Edit files, not runtime -p overrides. Keep the distributed template disabled.
+mode: both                         # cart | browser | both
 workflow:
-  name: cart_abandonment
-  nightly_name: cart_abandonment_nightly
-  session_span_seconds: 1800
-  eligibility_delay_minutes: 20
-  purchase_exclusion_hours: 48
-  cart_frequency_cap_per_day: 1
-  total_message_frequency_cap_per_day: 2
+  enabled: false                   # true permits TD reads AND table writes
+  max_recipients: 100               # final unique-recipient circuit breaker
+  max_execution_lag_seconds: 900    # never deliver historical/backfill sessions
 
-schedule:
-  realtime_cron: "<REALTIME_CRON>"
-  nightly_cron: "<NIGHTLY_CRON>"
-  night_window_start: "<NIGHT_WINDOW_START>"
-  night_window_end: "<NIGHT_WINDOW_END>"
-
-media:
-  <MEDIA_KEY>:
-    media_name: <MEDIA_NAME>
-    weblog_database: <WEBLOG_DATABASE>
-    weblog_table: <WEBLOG_TABLE>
-    realtime: <true_or_false>
-    timestamp_column: <TIMESTAMP_COLUMN>
-    primary_cookie_column: <PRIMARY_COOKIE_COLUMN>
-    fallback_cookie_column: <FALLBACK_COOKIE_COLUMN>
-    user_id_column: <USER_ID_COLUMN>
-    user_id_is_hashed: <true_or_false>
-    url_column: <URL_COLUMN>
-    path_column: <PATH_COLUMN>
-    item_payload_column: <ITEM_PAYLOAD_COLUMN_OR_NULL>
-    item_id_column: <ITEM_ID_COLUMN_OR_NULL>
-    item_name_column: <ITEM_NAME_COLUMN_OR_NULL>
-    item_category_column: <ITEM_CATEGORY_COLUMN_OR_NULL>
-    item_price_column: <ITEM_PRICE_COLUMN_OR_NULL>
-    item_order_column: <ITEM_ORDER_COLUMN_OR_NULL>
-    cart_rule: <CART_RULE_DESCRIPTION>
-    purchase_rule: <PURCHASE_RULE_DESCRIPTION>
-    bot_exclusion_rule: <BOT_EXCLUSION_RULE>
-
-sources:
-  recipients:
-    database: <RECIPIENT_DATABASE>
-    table: <RECIPIENT_TABLE>
-    email_column: <EMAIL_COLUMN>
-    identifier_column: <RECIPIENT_IDENTIFIER_COLUMN>
-    consent_predicate: <CONSENT_PREDICATE>
-  orders:
-    enabled: <true_or_false>
-    database: <ORDER_DATABASE_OR_NULL>
-    table: <ORDER_TABLE_OR_NULL>
-    identifier_column: <ORDER_IDENTIFIER_COLUMN_OR_NULL>
-    order_timestamp_column: <ORDER_TIMESTAMP_COLUMN_OR_NULL>
-    cancelled_predicate: <CANCELLED_PREDICATE_OR_NULL>
-  browser_abandonment_history:
-    enabled: <true_or_false>
-    table: <BROWSER_HISTORY_TABLE_OR_NULL>
-
-personalization:
-  max_cart_items: 4
-  recommendations:
-    enabled: <true_or_false>
-    product_master_table: <PRODUCT_MASTER_TABLE_OR_NULL>
-    popularity_table: <POPULARITY_TABLE_OR_NULL>
-    coview_table: <COVIEW_TABLE_OR_NULL>
-    fbt_table: <FBT_TABLE_OR_NULL>
-    order_history_table: <ORDER_HISTORY_TABLE_OR_NULL>
-    stock_table: <STOCK_TABLE_OR_NULL>
-    max_items: 4
-  customer_attributes:
-    enabled: <true_or_false>
-    table: <CUSTOMER_ATTRIBUTES_TABLE_OR_NULL>
-    join_key: <CUSTOMER_ATTRIBUTES_JOIN_KEY_OR_NULL>
-    output_fields: []
-  coupons:
-    enabled: <true_or_false>
-    expiry_date: <YYYY-MM-DD_OR_NULL>
-    expiry_label: <EXPIRY_LABEL_OR_NULL>
-    by_segment: {}
-
+timezone: UTC                      # SQL calendar-day/overnight timezone (IANA)
 output:
-  send_list_table: <SEND_LIST_TABLE>
-  history_table: <HISTORY_TABLE>
-  suppression_table: <SUPPRESSION_TABLE_OR_NULL>
-  template_fields:
-    - email
-    - cart_item_seq1_item_id
-    - cart_item_seq1_item_name
-    - cart_item_seq1_item_url
-    - cart_item_seq1_image_url
-    - cart_abandon_detected_at
+  database: abandonment_work
+  prefix: abandonment
 
-engage:
-  enabled: <true_or_false>
-  connection: <ENGAGE_CONNECTION>
-  workspace_id: <ENGAGE_WORKSPACE_ID>
-  always_on_campaign_id: <ALWAYS_ON_CAMPAIGN_ID>
-  normal_test_campaign_id: <NORMAL_TEST_CAMPAIGN_ID_OR_NULL>
-  low_stock_test_campaign_id: <LOW_STOCK_TEST_CAMPAIGN_ID_OR_NULL>
-  template_id: <TEMPLATE_ID_OR_NULL>
-  template_event_id: <TEMPLATE_EVENT_ID_OR_NULL>
+sources:                           # fully-qualified canonical tables; see README
+  events: abandonment_input.events
+  identities: abandonment_input.identities
+  recipients: abandonment_input.recipients
+  orders: abandonment_input.orders
+  products: abandonment_input.products
+  recommendations: abandonment_input.recommendations
+  attributes: abandonment_input.attributes
+  coupons: abandonment_input.coupons
+  history: abandonment_work.abandonment_history
 
-external_connector:
-  enabled: <true_or_false>
-  connection: <CONNECTOR_CONNECTION_OR_NULL>
-  type: <CONNECTOR_TYPE_OR_NULL>
-  destination: <DESTINATION_OBJECT_OR_NULL>
-  required_columns: []
-  test_mode: <true_or_false>
+scan:
+  lookback_seconds: 259200          # covers windows + session boundary + exclusions
+window:
+  kind: rolling                    # rolling | overnight; one common pipeline
+  max_age_seconds: 86400
+  session_timeout_seconds: 1800
+  inactivity_seconds: 2400          # >= timeout + expected ingestion latency
+  expected_latency_seconds: 600
+  overnight_start: "21:00:00"       # previous LOCAL date, inclusive
+  overnight_end: "07:00:00"         # session's LOCAL date, exclusive
+suppression:
+  purchase_seconds: 172800          # orders AND web signals, member-level
+  cart_seconds: 172800              # browser suppression, even in browser-only mode
+frequency:
+  period: rolling                  # rolling | calendar_day, same for both kinds
+  window_seconds: 86400             # used only for rolling
+  per_kind: 1
+  total: 2
+personalization:
+  max_items: 4                      # 1..4; browser shows its latest viewed item
+  products: false                   # latest publication/availability + enrichment
+  recommendations: false           # latest recommendation snapshot, max 4
+  attributes: false                # latest points/segment
+  coupons: false                   # valid_from <= as_of < valid_until
+
+delivery:
+  enabled: false
+  approved: false                  # approval recorded in customer-owned config
+  connection: ""                   # never put credentials here
+  workspace_id: ""
+  cart_campaign_id: ""             # unused/not required in browser-only mode
+  browser_campaign_id: ""          # unused/not required in cart-only mode
 
 testing:
-  recipients:
-    - <TEST_RECIPIENT_EMAIL>
-  use_plus_aliases: <true_or_false>
-  expected_variant_count: <EXPECTED_VARIANT_COUNT>
-  fixture_mode: <true_or_false>
-
-exclude_hashed_emails: []
+  mode: smoke                      # smoke | fixture | full; also selects LOCAL suite
+  enabled: false                   # permits synthetic TD test exports, never real data
+  approved: false                  # explicit approval of exact destinations/count/assets
+  recipients: []                   # normalized test emails; no real values in template
+  allowlist: []                    # every recipient must appear explicitly here
+  expected_messages: 0             # recipients x enabled kinds x selected variants
+  max_messages: 10                  # hard circuit breaker for one test attempt
+  connection: ""                   # isolated TEST assets, distinct from production
+  workspace_id: ""
+  cart_campaign_id: ""             # required only for cart/both
+  browser_campaign_id: ""          # required only for browser/both

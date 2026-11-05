@@ -1,18 +1,19 @@
+# Template metadata only. No account/profile override or remote project ID.
 name: cart-abandonment
-profile: <TD_PROFILE>
 project: cart-abandonment
-owner: <OWNER>
-purpose: Webログからカート放棄候補を抽出し、メール配信向け送信リストを作成する汎用サンプルWF
-schedule: <SCHEDULE>
+workflow: cart_abandonment
+purpose: 正規化入力からカート・ブラウザ放棄を検出する設定駆動テンプレート。配布時は抽出・配信・schedule無効。
 tags:
-  - cart-abandonment
-  - engage
+  - abandonment
+  - cart
+  - browser
   - template
 tables:
   reads:
-    - <WEBLOG_DATABASE>.<WEBLOG_TABLE>
-    - <RECIPIENT_DATABASE>.<RECIPIENT_TABLE>
-    - <ORDER_DATABASE>.<ORDER_TABLE>
+    - abandonment_input.events
+    - abandonment_input.identities
+    - abandonment_input.recipients
+    - abandonment_input.orders
   writes:
-    - <TARGET_DATABASE>.<SEND_LIST_TABLE>
-    - <TARGET_DATABASE>.<HISTORY_TABLE>
+    - abandonment_work.abandonment_send_list
+    - abandonment_work.abandonment_history
