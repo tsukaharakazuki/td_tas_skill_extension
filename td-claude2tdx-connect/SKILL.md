@@ -109,12 +109,16 @@ TD_WORKDIR="<WORKDIR>" NPM_REGISTRY="<URL>" bash setup-tdx.sh plan
 | 利用不可の理由 | お客様側で必要な設定 |
 |---|---|
 | Treasure Data に到達できない | ネットワーク許可に `*.treasuredata.com` / `*.treasuredata.co.jp` |
-| Node.js が無い・古い | セッション環境に Node.js 22.12 以上。用意できなければプラン D |
+| Node.js が無い・古い・脆弱性修正前・EOL | セッション環境に Node.js 22.23.4 / 24.22.1 / 26.12.1 以上（2026-10 のセキュリティ修正版）。用意できなければプラン D |
+| TLS 検証が無効（`NODE_TLS_REJECT_UNAUTHORIZED=0`） | その設定を外す。外せない環境では tdx を使わない |
+| 証明書チェーンに emSign / eMudhra | なりすましの疑い。**どのプランも進めない。** ネットワーク管理者に確認してもらう |
 | registry.npmjs.org（A） | ネットワーク許可に `registry.npmjs.org` |
 | ミラー（B） | ミラー URL と、そのホストのネットワーク許可。認証が要るなら `.npmrc` |
 | 一式（C） | 管理端末で `scripts/build-tdx-bundle.sh` を実行し、一式を作業フォルダに置く |
 
 **npm を許可できない環境で A を勧めない。** 選ばれたプランが今は利用不可なら、必要な設定を案内して待ち、`plan` を再実行して `○` を確認してから進む。
+
+**Node.js の版の要件を回避しない。** 修正前の Node.js で動かすために `NODE_TLS_REJECT_UNAUTHORIZED` を変える、ガードを通さず `node` で tdx 本体を起動する、`NODE_MIN_PATCHED` を書き換える、といったことをしない。`NPM_MIN_AGE_DAYS=0` もユーザーが明示的に求めたときだけ使う。
 
 ## Step 4: 操作範囲を決める
 
@@ -169,7 +173,7 @@ TD_WORKDIR="<WORKDIR>" [NPM_REGISTRY="<URL>"] bash setup-tdx.sh install <A|B|C|D
 TD_WORKDIR="<WORKDIR>" bash setup-tdx.sh verify
 ```
 
-検証項目: TD の各ホストへの到達、tdx の版、認証、見えるデータベース数、ワークフロー API、**ガードが組み込まれているか、各カテゴリの代表操作をガードが操作範囲どおりに許可・拒否するか。** 結果を `[OK]` / `[NG]` のまま要約して伝える。
+検証項目: TD の各ホストへの到達と証明書チェーン（emSign / eMudhra を含まないか）、TLS 検証が無効になっていないか、Node.js がセキュリティ修正版か、tdx の版、認証、見えるデータベース数、ワークフロー API、**ガードが組み込まれているか、各カテゴリの代表操作をガードが操作範囲どおりに許可・拒否するか。** 結果を `[OK]` / `[NG]` のまま要約して伝える。
 
 - `VERIFY=PASS` なら完了。見えるデータベースが組織の全 DB に近い場合は、そのキーが TD 側で絞られていないことを1行伝える。繰り返さない
 - `VERIFY=FAIL` なら `references/troubleshooting.md` を見る
@@ -217,6 +221,7 @@ TD_ALLOW_WRITE=1 tdx --site "$TDX_SITE" wf push ./project
 ### 共通
 
 - **キーの中身を表示しない。** `cat tdx_key.txt` や `echo $TDX_API_KEY` を実行しない
+- **ログや問い合わせ資料にキーを入れない。** サポートや社内に共有する資料（`tdx_audit.log`、エラー出力、作業フォルダの zip など）に `tdx_key.txt` を含めない。キーを共有してしまった疑いがあれば、無効化して作り直すよう伝える
 - 対話入力を求めるコマンド（引数なしの `wf run` など）は、引数を明示して実行する
 - tdx が `Update available ... Run: tdx upgrade` と表示しても無視する。`upgrade` はガードが止める。版を上げるのはユーザーが求めたときに Step 5 で行う
 - ユーザーから「何をしたか確認したい」と言われたら `tdx_audit.log` を見せる
@@ -228,7 +233,9 @@ TD_ALLOW_WRITE=1 tdx --site "$TDX_SITE" wf push ./project
 | コマンド | 理由 |
 |---|---|
 | `auth login` / `auth logout` / `profile` | キーファイル方式の認証を壊す（`auth status` は可） |
-| `claude` / `codex` / `mcp` / `chats` / `work` | 対話・常駐プロセスで返らなくなる |
+| `claude` / `codex` / `opencode` / `pi` / `mcp` / `chats` / `work` | 対話・常駐プロセスで返らなくなる |
+| `skill` | PC 上の AI エージェントの設定を書き換える |
+| `api` | 任意の API 呼び出しは操作範囲で分類できない |
 | `upgrade` | `tdx_setup.conf` の版とずれる。版を上げるときは `TDX_VERSION=<版>` を付けて Step 5 をやり直す |
 
 ---

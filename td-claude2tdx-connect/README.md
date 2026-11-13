@@ -40,18 +40,18 @@ Treasure AI の公式 CLI **[tdx](https://tdx.treasuredata.com/)** を使って�
 | **C. オフライン一式** | 管理端末で作った一式を SHA-256 照合して展開 | **TD ドメインのみ** | npm を許可できない |
 | **D. curl のみ** | tdx を入れず、同梱の `td-api.sh` を使う | **TD ドメインのみ** | Node.js を用意できない（機能限定） |
 
-A〜C は Node.js 22.12 以上が必要です。どのプランでも、tdx は版を完全固定し、install スクリプトを実行せずに入れます。
+A〜C は **Node.js 22.23.4 / 24.22.1 / 26.12.1 以上**（2026年10月のセキュリティリリース以降）が必要です。それより前の版、およびサポートが終了した系列（23 / 25 など）では導入も実行もしません。どのプランでも、tdx は版を完全固定し、install スクリプトを実行せずに入れます。A / B では、公開から 7 日未満の依存パッケージを使いません（`NPM_MIN_AGE_DAYS`）。
 
 ### 診断の例
 
 ```
-== 環境の診断（作業フォルダ: .../TreasureAI / リージョン: ap01 / tdx 2026.9.0）
+== 環境の診断（作業フォルダ: .../TreasureAI / リージョン: ap01 / tdx 2026.10.10）
 [OK] Treasure Data に到達できる（api.treasuredata.co.jp）
-[OK] Node.js v22.22.0（22.12 以上）
+[OK] Node.js v22.23.4（セキュリティ修正版）
 [--] 導入済みの tdx: なし
 [--] registry.npmjs.org: 到達できない、または npm が無い
 [--] 社内ミラー: 未指定（NPM_REGISTRY）
-[OK] オフライン一式: tdx-bundle-2026.9.0.tgz（SHA-256 一致）
+[OK] オフライン一式: tdx-bundle-2026.10.10.tgz（SHA-256 一致）
 
 == 選べるプラン
   A npm 直接       × registry.npmjs.org の許可が必要
@@ -67,9 +67,13 @@ A〜C は Node.js 22.12 以上が必要です。どのプランでも、tdx は�
 ```
 == 検証（プラン C / リージョン ap01）
 [OK] 到達: api.treasuredata.co.jp
+[OK] 証明書チェーン: api.treasuredata.co.jp に emSign / eMudhra を含まない
 [OK] 到達: api-cdp.treasuredata.co.jp
+[OK] 証明書チェーン: api-cdp.treasuredata.co.jp に emSign / eMudhra を含まない
 [OK] 到達: api-workflow.treasuredata.co.jp
-[OK] 版: tdx 2026.9.0
+[OK] 証明書チェーン: api-workflow.treasuredata.co.jp に emSign / eMudhra を含まない
+[OK] Node.js v22.23.4（セキュリティ修正版）
+[OK] 版: tdx 2026.10.10
 [OK] 認証: 成功
 [OK] 見えるデータベース: 12 件（多すぎる場合はポリシーで絞る）
 [OK] ワークフロー API: 参照可
@@ -187,17 +191,17 @@ Claude のネットワークアクセス設定で、許可ドメインに次を�
 
 ## プラン C: オフライン一式を作る
 
-npm に到達できる管理された端末（または社内ミラーを使える端末）で1回だけ実行します。Node.js 22.12 以上が必要です。
+npm に到達できる管理された端末（または社内ミラーを使える端末）で1回だけ実行します。Node.js 22.23.4 / 24.22.1 / 26.12.1 以上が必要です。
 
 ```bash
-./scripts/build-tdx-bundle.sh 2026.9.0 ~/TreasureAI
+./scripts/build-tdx-bundle.sh 2026.10.10 ~/TreasureAI
 # 社内ミラーを使う場合
-NPM_REGISTRY=https://npm.example.co.jp/ ./scripts/build-tdx-bundle.sh 2026.9.0 ~/TreasureAI
+NPM_REGISTRY=https://npm.example.co.jp/ ./scripts/build-tdx-bundle.sh 2026.10.10 ~/TreasureAI
 ```
 
 スクリプトが行うこと:
 
-1. `@treasuredata/tdx` を版完全固定で取得し、依存も `package-lock.json` で固定する
+1. `@treasuredata/tdx` を版完全固定で取得し、依存も `package-lock.json` で固定する。公開から 7 日未満の依存パッケージは選ばない（`NPM_MIN_AGE_DAYS`）
 2. install スクリプトを実行しない
 3. OS 依存のネイティブモジュール（キーチェーン連携。API キーは環境変数で渡すため不要）を除外し、Mac で作っても Linux のセッションで動く一式にする
 4. `npm audit signatures` で全パッケージのレジストリ署名を検証する。失敗したら一式を作らない
@@ -216,7 +220,7 @@ NPM_REGISTRY=https://npm.example.co.jp/ ./scripts/build-tdx-bundle.sh 2026.9.0 ~
 npm を許可できないお客様には、一式と導入に必要なファイルをまとめた zip を渡すと、置くだけで接続設定に進めます。リポジトリのクローン先で実行します。
 
 ```bash
-bash td-claude2tdx-connect/scripts/make-customer-kit.sh 2026.9.0 ~/Desktop
+bash td-claude2tdx-connect/scripts/make-customer-kit.sh 2026.10.10 ~/Desktop
 ```
 
 `td-connect-kit-<ver>.zip` ができます。
@@ -238,6 +242,19 @@ bash td-claude2tdx-connect/scripts/make-customer-kit.sh 2026.9.0 ~/Desktop
 - プラン C の一式は展開前に **SHA-256 を照合**し、一致しなければ展開しません。一式の作成時には全パッケージの**レジストリ署名を検証**し、**lockfile・SBOM・脆弱性レポート**を出力します
 - プラン D の `td-api.sh` は bash スクリプト1本（約250行）で、全文をレビューできます。API キーをコマンドライン引数に載せず、HTTPS で TD のホストにだけ送ります
 - tdx は起動時に `registry.npmjs.org` へ新しい版の有無を問い合わせることがあります（タイムアウト 2 秒）。許可していない環境では失敗して無視されるだけで、動作に影響はありません
+- プラン A / B では、公開から 7 日未満の依存パッケージを依存解決に使いません（`--before`）。メンテナのアカウントが乗っ取られて悪性の新版が公開されても、検知・取り下げまでの期間に入り込まないようにするためです
+
+### 2026年10〜11月のセキュリティ情報への対応
+
+Treasure AI の[セキュリティ情報](https://www.treasure.ai/blog/security-update-php-nodejs-emudhra-pingcap-tidb)で取り上げられた件のうち、このプラグインに関係するものと対応です。
+
+| 件 | このプラグインへの影響 | 対応 |
+|---|---|---|
+| Node.js 2026年10月のセキュリティリリース（Brotli 復号の境界外書き込み CVE-2026-111497、TLS ホスト名検証の不備 CVE-2026-105483 / 106069 / 106072 ほか） | tdx は Node.js で動き、API キーを付けて TLS で TD に接続する | 修正版（22.23.4 / 24.22.1 / 26.12.1）以上でなければ `plan` / `install` / `verify` が NG にし、ガードも実行を止める。EOL 系列も拒否 |
+| eMudhra（emSign）の中間 CA 鍵の侵害 | 侵害された CA で TD のドメインの偽証明書が作られると、API キーを盗まれるおそれがある | Node.js 修正版は CA 証明書を更新済み。`plan` / `verify` が TD への接続の証明書チェーンを調べ、emSign / eMudhra が含まれていれば中止する。`td-api.sh`（curl）はシステムの CA ストアを使うため、OS の CA 証明書も最新にする |
+| TLS 検証を緩める設定 | `NODE_TLS_REJECT_UNAUTHORIZED=0` や `~/.curlrc` の `insecure` があると上記の対策が効かない | `NODE_TLS_REJECT_UNAUTHORIZED=0` なら導入・実行しない。`td-api.sh` は `~/.curlrc` を読まない（`curl -q`） |
+| PingCAP / TiDB Cloud の侵害（サポート用資料に含まれていた認証情報の流出） | このプラグインは TiDB を使わない。教訓は「ログや問い合わせ資料に API キーを入れない」こと | 監査ログ（`tdx_audit.log`）では API キーの形の文字列を `***` に置き換える。サポートへの問い合わせに `tdx_key.txt` を添付しない。キーを共有してしまった疑いがあれば無効化して作り直す |
+| PHP の脆弱性 | 関係しない（PHP を使わない） | なし |
 
 ---
 
@@ -259,8 +276,12 @@ bash td-claude2tdx-connect/scripts/make-customer-kit.sh 2026.9.0 ~/Desktop
 | コマンド | 理由 |
 |---|---|
 | `auth login` / `auth logout` / `profile` | キーファイル方式の認証を壊す。`auth status` は通します |
-| `claude` / `codex` / `mcp` / `chats` / `work` | 対話・常駐プロセスで返らなくなる |
+| `claude` / `codex` / `opencode` / `pi` / `mcp` / `chats` / `work` | 対話・常駐プロセスで返らなくなる |
+| `skill` | PC 上の AI エージェントの設定を書き換える |
+| `api` | 任意の API 呼び出しは操作範囲で分類できない |
 | `upgrade` | `tdx_setup.conf` の版とずれる。版を上げるときはプランに沿って入れ直す |
+
+どのコマンドも `--help` は操作範囲に関係なく通します（上の表のコマンドを除く）。
 
 ---
 
@@ -280,8 +301,9 @@ source setup-tdx.sh && tdx --site "$TDX_SITE" databases
 | 環境変数 | 既定 | 用途 |
 |---|---|---|
 | `TD_WORKDIR` | 自動検出 | 作業フォルダ |
-| `TDX_VERSION` | `tdx_setup.conf` / `2026.9.0` | 導入する tdx の版 |
+| `TDX_VERSION` | `tdx_setup.conf` / `2026.10.10` | 導入する tdx の版 |
 | `NPM_REGISTRY` | `tdx_setup.conf` / 未設定 | プラン B のミラー URL |
+| `NPM_MIN_AGE_DAYS` | `tdx_setup.conf` / `7` | プラン A / B と一式の作成で、公開から N 日未満の依存パッケージを使わない（`0` で無効） |
 | `TDX_SITE` | キーファイル2行目 / `us01` | リージョン |
 
 版を上げるときは `TDX_VERSION=<版> bash setup-tdx.sh install <プラン>` を実行します（プラン C は新しい版の一式を作って置き換える）。失敗した場合は以前の `runtime/` に自動で戻ります。

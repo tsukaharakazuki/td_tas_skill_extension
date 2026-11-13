@@ -26,6 +26,8 @@
 # 安全上の決まり:
 #   - API キーはコマンドライン引数に載せない（ps で見えない）。curl には -K でプロセス置換経由で渡す
 #   - 通信は https のみ。宛先はリージョンごとの *.treasuredata.com / *.treasuredata.co.jp に固定
+#   - ~/.curlrc は読まない（curl -q）。証明書の検証はシステムの CA ストアで行う
+#     （2026-10 の eMudhra 中間 CA 侵害後は、OS の CA 証明書を最新にしておくこと）
 #   - 作業フォルダの tdx_policy.conf（setup-tdx.sh policy set で作る）の操作範囲に従う。
 #     data / workflow / cdp の水準（none / read / write）を見て、範囲外の操作は実行しない。
 #     ポリシーファイルが無い場合は status 以外を拒否する
@@ -78,7 +80,8 @@ chmod 700 "$TMPD"
 http() {
   local method="$1" host="$2" path="$3"; shift 3
   case "$host" in *.treasuredata.com|*.treasuredata.co.jp) ;; *) die "許可されていない宛先: $host" ;; esac
-  curl -sS --proto '=https' --tlsv1.2 --max-time 120 \
+  # -q: ~/.curlrc を読まない（insecure など TLS 検証を緩める設定を持ち込まない）。-q は先頭に置く必要がある
+  curl -q -sS --proto '=https' --tlsv1.2 --max-time 120 \
     -K <(printf 'header = "Authorization: TD1 %s"\n' "$TDX_API_KEY") \
     -H 'Accept: application/json' -A 'td-api.sh/1.0' \
     -X "$method" -o "$TMPD/body" -w '%{http_code}' "$@" "https://$host$path"
@@ -208,7 +211,7 @@ fi
 if [ $CHECK_ONLY = 1 ]; then printf '%s\t%s/%s\t%s\n' "$DECISION" "$CAT" "$LVL" "$REASON"; [ "$DECISION" = allow ]; exit $?; fi
 if [ "$CAT" != always ]; then
   printf '%s\t%s\t%s/%s\ttd-api.sh %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$DECISION" "$CAT" "$LVL" \
-    "$(printf '%s ' "$cmd" "$@" | tr '\n' ' ' | cut -c1-500)" >> "${TD_WORKDIR:-$SCRIPT_DIR}/tdx_audit.log" 2>/dev/null
+    "$(printf '%s ' "$cmd" "$@" | tr '\n' ' ' | sed -E 's#[0-9]+/[0-9a-fA-F]{40}#***#g' | cut -c1-500)" >> "${TD_WORKDIR:-$SCRIPT_DIR}/tdx_audit.log" 2>/dev/null
 fi
 [ "$DECISION" = allow ] || die "$REASON"
 

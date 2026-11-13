@@ -27,8 +27,16 @@
 #   td-api.sh            プラン D 用
 #
 # 環境変数（初回の plan / install で使う。install 後は tdx_setup.conf の値が既定になる）:
-#   TDX_VERSION   導入する tdx の版（既定 2026.9.0）
-#   NPM_REGISTRY  プラン B のミラー URL
+#   TDX_VERSION        導入する tdx の版（既定 2026.10.10）
+#   NPM_REGISTRY       プラン B のミラー URL
+#   NPM_MIN_AGE_DAYS   公開から N 日未満の依存パッケージを選ばない（既定 7。0 で無効。プラン A/B）
+#
+# セキュリティ上の前提（2026-11 更新）:
+#   - Node.js は 2026-10 のセキュリティリリース以降の版だけを使う（NODE_MIN_PATCHED）。
+#     Brotli 復号の境界外書き込み（CVE-2026-111497）、TLS ホスト名検証の不備（CVE-2026-105483 / 106069 / 106072）、
+#     eMudhra の中間 CA 侵害に対する CA 証明書の更新を含む
+#   - NODE_TLS_REJECT_UNAUTHORIZED=0 など TLS 検証を無効にする設定があれば導入・実行しない
+#   - Treasure Data への接続で、証明書チェーンに emSign / eMudhra が含まれていれば中止する（なりすましの疑い）
 
 # ---------- 共通 ----------
 _SETUP_SOURCED=0
@@ -56,8 +64,10 @@ _conf_get() {
 
 _load_settings() {
   CONF_MODE="$(_conf_get TDX_SETUP_MODE)"
-  TDX_VERSION="${TDX_VERSION:-$(_conf_get TDX_VERSION)}"; TDX_VERSION="${TDX_VERSION:-2026.9.0}"
+  TDX_VERSION="${TDX_VERSION:-$(_conf_get TDX_VERSION)}"; TDX_VERSION="${TDX_VERSION:-2026.10.10}"
   NPM_REGISTRY="${NPM_REGISTRY:-$(_conf_get NPM_REGISTRY)}"
+  NPM_MIN_AGE_DAYS="${NPM_MIN_AGE_DAYS:-$(_conf_get NPM_MIN_AGE_DAYS)}"; NPM_MIN_AGE_DAYS="${NPM_MIN_AGE_DAYS:-7}"
+  case "$NPM_MIN_AGE_DAYS" in ''|*[!0-9]*) NPM_MIN_AGE_DAYS=7 ;; esac
   TDX_SITE_FILE="$(sed -n '2p' "$TD_WORKDIR/tdx_key.txt" 2>/dev/null | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
   SITE="${TDX_SITE:-${TDX_SITE_FILE:-us01}}"
   case "$SITE" in
@@ -69,13 +79,76 @@ _load_settings() {
 }
 
 _sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi | awk '{print $1}'; }
-_http()   { curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$1" 2>/dev/null; }
+_http()   { curl -q -s -o /dev/null -w '%{http_code}' --max-time 15 "$1" 2>/dev/null; }
 _latest_bundle() { ls -1 "$TD_WORKDIR"/tdx-bundle-*.tgz 2>/dev/null | sort -V | tail -1; }
 
+# 系列ごとの「2026-10 セキュリティリリース」以降の版。表に無い系列は、これより古ければ EOL として拒否する
+NODE_MIN_PATCHED="22.23.4 24.22.1 26.12.1"
+NODE_REQ_TEXT="Node.js 22.23.4 / 24.22.1 / 26.12.1 以上（2026-10 のセキュリティ修正版）"
+
+_ver_ge() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$2" ]; }
+
+# Node.js が使えるか。使えなければ NODE_WHY に理由を入れて 1 を返す
 _node_ok() {
-  command -v node >/dev/null 2>&1 || return 1
-  local v; v="$(node -v 2>/dev/null | tr -d v)"
-  [ "$(printf '%s\n22.12.0\n' "$v" | sort -V | head -1)" = "22.12.0" ]
+  NODE_WHY=""
+  command -v node >/dev/null 2>&1 || { NODE_WHY="Node.js が無い"; return 1; }
+  local v major m newest=""
+  v="$(node -v 2>/dev/null | tr -d v)"; major="${v%%.*}"
+  case "$major" in ''|*[!0-9]*) NODE_WHY="Node.js の版を判定できない（${v:-不明}）"; return 1 ;; esac
+  # zsh から source されても動くよう、単語分割に頼らず1行ずつ読む
+  while read -r m; do
+    [ -n "$m" ] || continue
+    newest="${m%%.*}"
+    if [ "${m%%.*}" = "$major" ]; then
+      _ver_ge "$v" "$m" && return 0
+      NODE_WHY="Node.js v$v は脆弱性修正前（v$m 以上が必要。CVE-2026-111497 ほか）"; return 1
+    fi
+  done <<EOF
+$(printf '%s\n' "$NODE_MIN_PATCHED" | tr ' ' '\n')
+EOF
+  [ "$major" -gt "$newest" ] && return 0
+  if _ver_ge "$v" 22.12.0; then NODE_WHY="Node.js v$v はサポート終了（EOL）の系列でセキュリティ修正が出ない"
+  else NODE_WHY="Node.js v$v は古い"; fi
+  return 1
+}
+
+# TLS 検証を無効にする設定が無いか（API キーを送るため、無効なら何もしない）
+_tls_env_ok() {
+  if [ "${NODE_TLS_REJECT_UNAUTHORIZED:-}" = 0 ]; then
+    _ng "NODE_TLS_REJECT_UNAUTHORIZED=0 で TLS 検証が無効になっている（解除するまで tdx を使わない）"; return 1
+  fi
+  [ -n "${NODE_EXTRA_CA_CERTS:-}" ] && _na "NODE_EXTRA_CA_CERTS=${NODE_EXTRA_CA_CERTS} が追加の CA として信頼される（社内プロキシ用か確認）"
+  return 0
+}
+
+# Treasure Data の証明書チェーンに emSign / eMudhra が含まれないか（2026-10 の中間 CA 侵害）
+# 戻り値: 0 = 問題なし / 1 = 含まれる / 2 = 確認できない
+_cert_chain_check() {
+  local h="$1" chain=""
+  chain="$(curl -q -s -o /dev/null --max-time 15 -w '%{certs}' "https://$h/" 2>/dev/null | grep -E '^(Subject|Issuer):')"
+  if [ -z "$chain" ] && command -v openssl >/dev/null 2>&1; then
+    chain="$(_with_timeout 20 openssl s_client -connect "$h:443" -servername "$h" -showcerts </dev/null 2>/dev/null | grep -E '^ *([0-9]+ s:|i:)')"
+  fi
+  [ -n "$chain" ] || return 2
+  printf '%s' "$chain" | grep -qiE 'emsign|emudhra' && return 1
+  return 0
+}
+
+_report_cert_chain() {  # $1 = host。含まれていれば 1 を返す
+  _cert_chain_check "$1"
+  case $? in
+    0) _ok "証明書チェーン: $1 に emSign / eMudhra を含まない" ;;
+    1) _ng "証明書チェーン: $1 の経路に emSign / eMudhra の証明書がある（なりすましの疑い。接続を中止してネットワーク管理者に確認）"; return 1 ;;
+    *) _na "証明書チェーン: $1 は確認できなかった（curl 7.88 以上か openssl があれば確認する）" ;;
+  esac
+  return 0
+}
+
+# プラン A/B: 公開から NPM_MIN_AGE_DAYS 日未満の版を依存解決に使わない（乗っ取られたパッケージの新版を避ける）
+_npm_cooldown_args() {
+  [ "${NPM_MIN_AGE_DAYS:-0}" -gt 0 ] 2>/dev/null || return 0
+  local d; d="$(node -e 'console.log(new Date(Date.now()-Number(process.argv[1])*864e5).toISOString())' "$NPM_MIN_AGE_DAYS" 2>/dev/null)"
+  [ -n "$d" ] && printf '%s\n' "--before=$d"
 }
 
 # macOS には timeout が無いので、あるものを使う（無ければそのまま実行）
@@ -102,14 +175,16 @@ _load_key() {
 # ---------- plan ----------
 cmd_plan() {
   _say "== 環境の診断（作業フォルダ: $TD_WORKDIR / リージョン: $SITE / tdx ${TDX_VERSION}）"
-  local td=0 node=0 pub=0 mir=0 bun=0 have=0 bundle=""
+  local td=0 node=0 pub=0 mir=0 bun=0 have=0 tls=1 bundle=""
 
   if [ "$(_http "https://$H_API/v3/system/server_status")" = 200 ]; then td=1; _ok "Treasure Data に到達できる（${H_API}）"
   else _ng "Treasure Data に到達できない（${H_API}）→ ネットワーク許可に *.treasuredata.com / *.treasuredata.co.jp が必要"; fi
+  if [ $td = 1 ]; then _report_cert_chain "$H_API" || td=0; fi
+  _tls_env_ok || tls=0
 
-  if _node_ok; then node=1; _ok "Node.js $(node -v)（22.12 以上）"
-  elif command -v node >/dev/null 2>&1; then _ng "Node.js $(node -v) は古い（22.12 以上が必要）"
-  else _ng "Node.js が無い（プラン A/B/C には必要）"; fi
+  if _node_ok; then node=1; _ok "Node.js $(node -v)（セキュリティ修正版）"
+  else _ng "${NODE_WHY} → プラン A/B/C には ${NODE_REQ_TEXT} が必要"; fi
+  [ $tls = 1 ] || node=0
 
   if [ -x "$TD_WORKDIR/runtime/bin/tdx" ]; then have=1; _ok "導入済みの tdx: $("$TD_WORKDIR/runtime/bin/tdx" --version 2>/dev/null | head -1)"
   else _na "導入済みの tdx: なし"; fi
@@ -132,16 +207,19 @@ cmd_plan() {
   _say ""
   _say "== 選べるプラン"
   local A B C D why
-  why=""; [ $node = 1 ] || why="Node.js 22.12 以上が必要"; [ $pub = 1 ] || why="${why:+$why / }registry.npmjs.org の許可が必要"
+  local nwhy="${NODE_REQ_TEXT} が必要"; [ $tls = 1 ] || nwhy="TLS 検証の無効化を解除する必要"
+  why=""; [ $node = 1 ] || why="$nwhy"; [ $pub = 1 ] || why="${why:+$why / }registry.npmjs.org の許可が必要"
   [ -z "$why" ] && A=1 || A=0
   _say "  A npm 直接       $([ $A = 1 ] && echo '○ 利用可' || echo "× $why")"
-  why=""; [ $node = 1 ] || why="Node.js 22.12 以上が必要"; [ $mir = 1 ] || why="${why:+$why / }NPM_REGISTRY に取得可能なミラーが必要"
+  why=""; [ $node = 1 ] || why="$nwhy"; [ $mir = 1 ] || why="${why:+$why / }NPM_REGISTRY に取得可能なミラーが必要"
   [ -z "$why" ] && B=1 || B=0
   _say "  B 社内ミラー     $([ $B = 1 ] && echo '○ 利用可' || echo "× $why")"
-  why=""; [ $node = 1 ] || why="Node.js 22.12 以上が必要"; [ $bun = 1 ] || why="${why:+$why / }管理端末で作った一式を作業フォルダに置く必要"
+  why=""; [ $node = 1 ] || why="$nwhy"; [ $bun = 1 ] || why="${why:+$why / }管理端末で作った一式を作業フォルダに置く必要"
   [ -z "$why" ] && C=1 || C=0
   _say "  C オフライン一式 $([ $C = 1 ] && echo '○ 利用可' || echo "× $why")"
   D=1; _say "  D curl のみ      ○ 利用可（tdx の全機能は使えない。参照・SQL・WF 参照中心）"
+  [ "${NPM_MIN_AGE_DAYS}" -gt 0 ] && { [ $A = 1 ] || [ $B = 1 ]; } \
+    && _say "  ※ A/B は公開から ${NPM_MIN_AGE_DAYS} 日未満の依存パッケージを使わない（NPM_MIN_AGE_DAYS）"
   [ $td = 1 ] || _say "  ※ どのプランも Treasure Data への到達が前提。先にネットワーク許可を設定する"
 
   local rec=D
@@ -172,6 +250,8 @@ _write_conf() {
     echo "TDX_SETUP_MODE=$1"
     echo "TDX_VERSION=$TDX_VERSION"
     echo "NPM_REGISTRY=${NPM_REGISTRY:-}"
+    echo "NPM_MIN_AGE_DAYS=${NPM_MIN_AGE_DAYS}"
+    echo "NODE_VERSION=$(node -v 2>/dev/null)"
     echo "INSTALLED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   } > "$TD_WORKDIR/tdx_setup.conf"
 }
@@ -180,8 +260,10 @@ cmd_install() {
   local mode; mode="$(printf '%s' "${1:-}" | tr '[:lower:]' '[:upper:]')"
   case "$mode" in A|B|C|D) ;; *) _say "usage: setup-tdx.sh install <A|B|C|D>（まず plan で確認）"; return 1 ;; esac
 
+  _tls_env_ok || return 1
+  _report_cert_chain "$H_API" >/dev/null || { _ng "Treasure Data の証明書チェーンに emSign / eMudhra が含まれるため導入しません"; return 1; }
   if [ "$mode" != D ]; then
-    _node_ok || { _ng "Node.js 22.12 以上が必要です"; return 1; }
+    _node_ok || { _ng "${NODE_WHY}。${NODE_REQ_TEXT} が必要です"; return 1; }
     if [ -d "$TD_WORKDIR/runtime" ]; then
       _say "既存の runtime/ を runtime.old/ に退避します"
       rm -rf "$TD_WORKDIR/runtime.old"; mv "$TD_WORKDIR/runtime" "$TD_WORKDIR/runtime.old"
@@ -195,10 +277,13 @@ cmd_install() {
         [ -n "$NPM_REGISTRY" ] || { _rollback "プラン B には NPM_REGISTRY が必要です"; return 1; }
         reg=(--registry "$NPM_REGISTRY")
       fi
+      local cool; cool="$(_npm_cooldown_args)"
+      [ -n "$cool" ] && reg+=("$cool")
       _say "tdx $TDX_VERSION を導入しています（$([ "$mode" = B ] && echo "$NPM_REGISTRY" || echo registry.npmjs.org)、60秒ほど）"
+      [ -n "$cool" ] && _say "公開から ${NPM_MIN_AGE_DAYS} 日未満の依存パッケージは使いません（${cool#--before=} より前の版で解決）"
       npm i -g --prefix "$TD_WORKDIR/runtime" ${reg[@]+"${reg[@]}"} --ignore-scripts --omit=optional \
         --no-fund --no-audit "@treasuredata/tdx@$TDX_VERSION" >/dev/null 2>&1 \
-        || { _rollback "導入に失敗しました"; return 1; }
+        || { _rollback "導入に失敗しました（tdx $TDX_VERSION が公開から ${NPM_MIN_AGE_DAYS} 日未満なら、古い版を TDX_VERSION で指定する）"; return 1; }
       ;;
     C)
       local b; b="$(_latest_bundle)"
@@ -361,8 +446,10 @@ cmd_verify() {
   local h c
   for h in "$H_API" "$H_CDP" "$H_WF"; do
     c="$(_http "https://$h/")"
-    if [ "$c" != 000 ]; then _ok "到達: $h"; else _ng "到達できない: $h"; fail=1; fi
+    if [ "$c" != 000 ]; then _ok "到達: $h"; _report_cert_chain "$h" || fail=1
+    else _ng "到達できない: $h"; fail=1; fi
   done
+  _tls_env_ok || fail=1
 
   # 2. 本体と版
   _load_key
@@ -372,24 +459,27 @@ cmd_verify() {
     if printf '%s' "$out" | grep -q 'auth: OK'; then _ok "$(printf '%s' "$out" | grep 'auth: OK')"
     else _ng "認証: $(printf '%s' "$out" | tail -1)"; fail=1; fi
   else
+    if _node_ok; then _ok "Node.js $(node -v)（セキュリティ修正版）"
+    else _ng "${NODE_WHY}（${NODE_REQ_TEXT} が必要。用意できなければプラン D）"; fail=1; fi
     export PATH="$TD_WORKDIR/runtime/bin:$PATH"
-    local v; v="$(tdx --version 2>/dev/null | head -1)"
+    local tx="$TD_WORKDIR/runtime/bin/tdx"  # PATH 上の別の tdx を検証しないよう実体を固定する
+    local v; v="$("$tx" --version 2>/dev/null | head -1)"
     if printf '%s' "$v" | grep -q "tdx $TDX_VERSION"; then _ok "版: $v"
     else _ng "版: '${v:-不明}'（期待: ${TDX_VERSION}）"; fail=1; fi
 
     # 3. 認証
-    if tdx --site "$SITE" auth status >/dev/null 2>&1; then _ok "認証: 成功"
+    if "$tx" --site "$SITE" auth status >/dev/null 2>&1; then _ok "認証: 成功"
     else _ng "認証: 失敗（キー / リージョンを確認。tdx --site $SITE auth status で詳細）"; fail=1; fi
 
     # 4. 権限範囲（参照のみで確認。操作範囲で不可のものは確認しない）
     local n
     if [ "$(_pol_get data)" = read ] || [ "$(_pol_get data)" = write ]; then
-      n="$(tdx --site "$SITE" databases --jsonl 2>/dev/null | grep -c '^[[:space:]]*{')"
+      n="$("$tx" --site "$SITE" databases --jsonl 2>/dev/null | grep -c '^[[:space:]]*{')"
       if [ "${n:-0}" -gt 0 ]; then _ok "見えるデータベース: $n 件（多すぎる場合は TD のポリシーで絞る）"
       else _ng "データベースが1件も見えない（権限かリージョンを確認）"; fail=1; fi
     else _na "データベース: 操作範囲で不可のため確認しない"; fi
     if [ "$(_pol_get workflow)" = read ] || [ "$(_pol_get workflow)" = write ]; then
-      if tdx --site "$SITE" wf projects >/dev/null 2>&1; then _ok "ワークフロー API: 参照可"
+      if "$tx" --site "$SITE" wf projects >/dev/null 2>&1; then _ok "ワークフロー API: 参照可"
       else _ng "ワークフロー API: 参照できない"; fail=1; fi
     else _na "ワークフロー: 操作範囲で不可のため確認しない"; fi
   fi
@@ -464,7 +554,14 @@ if [ $_SETUP_SOURCED = 1 ]; then
   else
     _say "policy: 未設定（tdx は status 以外すべて拒否）"
   fi
-  command -v tdx >/dev/null 2>&1 && tdx --version 2>/dev/null | head -1
+  if [ "${CONF_MODE:-}" != D ] && ! _node_ok; then _say "warning: ${NODE_WHY}。tdx-guard は実行を止めます（${NODE_REQ_TEXT}）"; fi
+  # runtime/ が無いときに PATH 上の別の tdx（ガードを通らない）が使われないよう、ガード経由の実体に固定する
+  _TDX_SHIM="$TD_WORKDIR/runtime/bin/tdx"
+  tdx() {
+    [ -x "$_TDX_SHIM" ] || { echo "tdx が導入されていません（$_TDX_SHIM）。setup-tdx.sh install を実行してください" >&2; return 127; }
+    "$_TDX_SHIM" "$@"
+  }
+  [ -x "$_TDX_SHIM" ] && tdx --version 2>/dev/null | head -1
   return 0
 fi
 
@@ -473,5 +570,5 @@ case "${1:-plan}" in
   install) shift; cmd_install "$@" ;;
   verify)  cmd_verify ;;
   policy)  shift; cmd_policy "$@" ;;
-  *) sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
