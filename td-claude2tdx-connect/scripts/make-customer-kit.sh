@@ -3,7 +3,7 @@
 #
 # Mac の「ターミナル」で、td_tas_skill_extension をクローンしたフォルダから実行する。
 #   bash td-claude2tdx-connect/scripts/make-customer-kit.sh [バージョン] [出力先]
-#   例: bash td-claude2tdx-connect/scripts/make-customer-kit.sh 2026.9.0 ~/Desktop
+#   例: bash td-claude2tdx-connect/scripts/make-customer-kit.sh 2026.10.10 ~/Desktop
 #
 # やること:
 #   1. build-tdx-bundle.sh で署名検証つきの一式（tgz と .sha256）を作る
@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-VER="${1:-2026.9.0}"
+VER="${1:-2026.10.10}"
 OUT="$(cd "${2:-.}" && pwd)"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN="$(cd "$HERE/.." && pwd)"

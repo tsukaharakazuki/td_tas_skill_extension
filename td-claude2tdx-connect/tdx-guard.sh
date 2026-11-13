@@ -22,7 +22,8 @@
 #     ただし --dry-run 付き（プレビュー）は了承なしで通す。ポリシーの水準は満たす必要がある
 #   - SQL（query / job submit）は文面を見て read / write を判定する。判定できない形は write 扱い
 #   - 分類できないコマンドは拒否する。ポリシーファイルが無い場合も拒否する（安全側に倒す）
-#   - 判定結果はすべて tdx_audit.log に残す
+#   - 判定結果はすべて tdx_audit.log に残す（API キーの形の文字列は *** に置き換える）
+#   - 実行の直前に、Node.js がセキュリティ修正版か、TLS 検証が無効になっていないかを確かめる
 #
 # 注意: これは Claude とユーザーの誤操作を防ぐための仕組みで、セキュリティ境界ではない。
 #       最終的な権限境界は API キーのユーザーに割り当てた Treasure Data のポリシー。
@@ -58,11 +59,12 @@ rank() { case "$1" in write) echo 2 ;; read) echo 1 ;; *) echo 0 ;; esac; }
 
 # ---------- 引数の整理 ----------
 # 値を取るグローバルオプションの値を位置引数と取り違えないように除く
-POS=(); HAS_RESULT=0; DRY_RUN=0; SQL_FILE=""
+POS=(); HAS_RESULT=0; DRY_RUN=0; HELP=0; SQL_FILE=""
 i=0
 while [ $i -lt ${#ARGS[@]} ]; do
   a="${ARGS[$i]}"
   case "$a" in
+    -h|--help) HELP=1 ;;
     -C|--directory|-p|--profile|--site|--format|--output|--limit|--timeout|--session|--parent-segment|--llm-project|\
     -d|--database|--in|--catalog|--job-type|--revision|--reason|--resume-from|--params)
       i=$((i+2)); continue ;;
@@ -119,7 +121,9 @@ case "$top" in
   ""|status|unset|use|help) CAT=always; LVL=read ;;
   auth)        if [ "${POS[1]:-}" = status ]; then CAT=always; LVL=read; else CAT=blocked; WHY="キーファイル方式の認証を壊すため"; fi ;;
   profile|profiles) CAT=blocked; WHY="キーファイル方式の認証を壊すため" ;;
-  mcp|claude|codex|chats|work) CAT=blocked; WHY="対話・常駐プロセスで返らなくなるため" ;;
+  mcp|claude|codex|opencode|pi|chats|work) CAT=blocked; WHY="対話・常駐プロセスで返らなくなるため" ;;
+  skill|skills) CAT=blocked; WHY="PC 上の AI エージェントの設定を書き換えるため" ;;
+  api)         CAT=blocked; WHY="任意の API 呼び出しは操作範囲で分類できないため" ;;
   upgrade)     CAT=blocked; WHY="tdx_setup.conf の版とずれるため（setup-tdx.sh install で入れ直す）" ;;
 
   database|db|databases|table|tables|show|describe|desc) CAT=data; LVL="$(verb_level)"
@@ -138,13 +142,16 @@ case "$top" in
                CAT=cdp; LVL="$(verb_level)"; [ "$top" = activations ] && LVL=read ;;
   journey|journeys) CAT=journey; LVL="$(verb_level)" ;;
   engage|delivery)  CAT=engage;  LVL="$(verb_level)" ;;
-  agent|agents|chat|llm) CAT=ai; LVL="$(verb_level)"; [ "$top" = chat ] && LVL=write ;;
+  agent|agents|chat|llm|ai) CAT=ai; LVL="$(verb_level)"; [ "$top" = chat ] && LVL=write ;;
   user|users|policy) CAT=admin; LVL="$(verb_level)" ;;
+  usage)       CAT=admin; LVL=read ;;
   *) CAT=unknown; WHY="分類できないコマンドのため" ;;
 esac
 # 複数形の別名（tdx tables <pattern> など）は一覧表示
 case "$top" in databases|tables|jobs|segments|parent-segments|journeys|agents|users|connections) LVL=read ;; esac
 [ "$LVL" = local ] && { CAT=always; LVL=read; }
+# --help は表示だけ（止めているコマンドは除く）
+[ $HELP = 1 ] && [ "$CAT" != blocked ] && { CAT=always; LVL=read; }
 
 # ---------- 判定 ----------
 DECISION=allow; REASON=""
@@ -169,7 +176,8 @@ log_cmd() {
     out+=" ${a//$'\n'/ }"
     [ "$a" = set ] && in_list secrets " ${ARGS[*]} " && mask=1   # wf secrets set の値は残さない
   done
-  printf '%s' "${out:1}" | cut -c1-500
+  # API キーの形（<数字>/<40桁の16進>）は残さない。ログをサポートなどに渡しても漏れないようにする
+  printf '%s' "${out:1}" | sed -E 's#[0-9]+/[0-9a-fA-F]{40}#***#g' | cut -c1-500
 }
 if [ $CHECK_ONLY = 0 ] && ! { [ "$CAT" = always ] && [ "$DECISION" = allow ]; }; then
   { printf '%s\t%s\t%s/%s\t%s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$DECISION" "$CAT" "${LVL:--}" "$(log_cmd)"; } >> "$AUDIT" 2>/dev/null
@@ -184,4 +192,26 @@ if [ "$DECISION" = deny ]; then
   echo "tdx-guard: 実行しませんでした — $REASON" >&2
   exit 126
 fi
+
+# ---------- 実行環境（API キーを送る前に毎回確かめる） ----------
+# 2026-10 の Node.js セキュリティリリース（Brotli / TLS ホスト名検証 / eMudhra の CA 更新）以降の版だけで動かす
+NODE_MIN_PATCHED="22.23.4 24.22.1 26.12.1"
+node_patched() {
+  local v major m newest=0
+  v="$(node -v 2>/dev/null | tr -d v)"; major="${v%%.*}"
+  case "$major" in ''|*[!0-9]*) return 1 ;; esac
+  for m in $NODE_MIN_PATCHED; do
+    newest="${m%%.*}"
+    [ "$newest" = "$major" ] && { [ "$(printf '%s\n%s\n' "$v" "$m" | sort -V | head -1)" = "$m" ]; return $?; }
+  done
+  [ "$major" -gt "$newest" ]
+}
+env_deny() {
+  echo "tdx-guard: 実行しませんでした — $1" >&2
+  printf '%s\tdeny\tenv\t%s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$1" >> "$AUDIT" 2>/dev/null
+  exit 126
+}
+[ "${NODE_TLS_REJECT_UNAUTHORIZED:-}" = 0 ] && env_deny "NODE_TLS_REJECT_UNAUTHORIZED=0 で TLS 検証が無効になっています"
+node_patched || env_deny "Node.js $(node -v 2>/dev/null || echo なし) は脆弱性修正前かサポート終了の版です（22.23.4 / 24.22.1 / 26.12.1 以上が必要。setup-tdx.sh plan で確認）"
+
 real_tdx ${ARGS[@]+"${ARGS[@]}"}

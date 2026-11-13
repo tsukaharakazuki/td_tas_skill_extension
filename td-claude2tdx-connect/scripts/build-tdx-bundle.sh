@@ -7,10 +7,11 @@
 # setup-tdx.sh は npm に一切アクセスせずに tdx を展開する。
 #
 #   ./build-tdx-bundle.sh [バージョン] [出力先]
-#   NPM_REGISTRY=https://npm.example.co.jp/ ./build-tdx-bundle.sh 2026.9.0 ~/TreasureAI
+#   NPM_REGISTRY=https://npm.example.co.jp/ ./build-tdx-bundle.sh 2026.10.10 ~/TreasureAI
 #
 # やること:
 #   1. バージョン完全固定で @treasuredata/tdx を入れる（依存も package-lock.json で固定）
+#      公開から NPM_MIN_AGE_DAYS 日（既定 7）未満の依存パッケージは選ばない（乗っ取られた新版を避ける）
 #   2. install スクリプトを実行しない（--ignore-scripts）
 #   3. OS 依存のネイティブモジュール（キーチェーン連携。APIキーを環境変数で渡すため不要）を除外し、
 #      Mac で作っても Linux のセッションで動く純 JS の一式にする（--omit=optional）
@@ -20,21 +21,27 @@
 
 set -euo pipefail
 
-VER="${1:-2026.9.0}"
+VER="${1:-2026.10.10}"
 OUT="$(cd "${2:-.}" && pwd)"
 REG_ARGS=()
 [ -n "${NPM_REGISTRY:-}" ] && REG_ARGS=(--registry "$NPM_REGISTRY")
+MIN_AGE="${NPM_MIN_AGE_DAYS:-7}"
 
-command -v npm >/dev/null || { echo "npm が必要です（Node.js 22.12 以上）"; exit 1; }
+command -v npm >/dev/null || { echo "npm が必要です（Node.js 22.23.4 / 24.22.1 / 26.12.1 以上）"; exit 1; }
+COOL_ARGS=()
+if [ "$MIN_AGE" -gt 0 ] 2>/dev/null; then
+  COOL_ARGS=("--before=$(node -e 'console.log(new Date(Date.now()-Number(process.argv[1])*864e5).toISOString())' "$MIN_AGE")")
+fi
 
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 cd "$WORK"
 mkdir pkg && cd pkg
 printf '{ "name": "tdx-bundle", "version": "%s", "private": true }\n' "$VER" > package.json
 
-echo "== 1. インストール（@treasuredata/tdx@$VER, scripts 無効, optional 除外）"
-npm install ${REG_ARGS[@]+"${REG_ARGS[@]}"} --save-exact --ignore-scripts --omit=optional \
-  --no-fund --no-audit "@treasuredata/tdx@$VER"
+echo "== 1. インストール（@treasuredata/tdx@$VER, scripts 無効, optional 除外, 公開 ${MIN_AGE} 日未満の版を除外）"
+npm install ${REG_ARGS[@]+"${REG_ARGS[@]}"} ${COOL_ARGS[@]+"${COOL_ARGS[@]}"} --save-exact --ignore-scripts --omit=optional \
+  --no-fund --no-audit "@treasuredata/tdx@$VER" \
+  || { echo "インストールに失敗しました（tdx $VER が公開から ${MIN_AGE} 日未満なら、古い版を指定する）"; exit 1; }
 
 echo "== 2. レジストリ署名の検証"
 if [ "${SKIP_SIGNATURE_CHECK:-0}" = 1 ]; then

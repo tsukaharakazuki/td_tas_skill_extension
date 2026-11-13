@@ -58,10 +58,11 @@
 ## 探し方が分からないとき
 
 ```
-tdx --site "$TDX_SITE" search "<やりたいこと>"
+tdx --site "$TDX_SITE" --help
+tdx --site "$TDX_SITE" <コマンド> --help
 ```
 
-自然文から該当コマンドを引ける。手当たり次第に `--help` を叩くより速い。
+`--help` は操作範囲に関係なくガードを通る（書き込み系のコマンドでも `TD_ALLOW_WRITE=1` は不要）。
 
 ## クエリを書くときの流儀
 
