@@ -19,7 +19,7 @@ _export:
 +matrix_factorization:
   py>: tasks.user_based_cf.matrix_factorization.run
   docker:
-    image: "treasuredata/customscript-python:3.12.11-td3"
+    image: "treasuredata/customscript-python:3.12.11-td4"
   database: ${common.database}
   source_table: user_based_cf_interactions
   output_table: reco_user_based_cf
