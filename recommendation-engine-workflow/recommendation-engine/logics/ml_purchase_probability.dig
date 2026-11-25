@@ -22,7 +22,7 @@ _export:
 +train_predict:
   py>: tasks.ml_purchase_probability.train_predict.run
   docker:
-    image: "treasuredata/customscript-python:3.12.11-td1"
+    image: "treasuredata/customscript-python:3.12.11-td4"
   database: ${common.database}
   prediction_window_days: ${logics.ml_purchase_probability.prediction_window_days}
   _env:
